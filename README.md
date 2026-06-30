@@ -1,9 +1,11 @@
 This is the restructured BHJet version
 
 ## To-do's
-- [ ] cut-off in kariba + here (Ruby?)
+- [X] cut-off in kariba + here (Ruby?) 
+- [ ] single zone particle cutoff shape test/proof 
 - [ ] shock: temperature jump (Ruby?)
 - [ ] f_pl scaling (Ruby?)
+- [ ] photon time scale example plot (e.g. particle cooling plot) with sa break
 - [ ] move DEFAULTs all to one file (default_values.hpp)
 - [ ] disk + AGN target fields (Ruby?)
 - [ ] adding agnjet jet dynamics (Ruby?)
