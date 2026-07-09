@@ -127,6 +127,7 @@ namespace bhjet
                 std::cout << "initializing a mixed distribution (thermal + powerlaw)" << std::endl;
             // mixed thermal + non-thermal
             electrons_mixed = kariba::Mixed(n_bins_e);
+            electrons_mixed.set_cutoff_type(cutoff_type);
             electrons_mixed.set_temp_kev(electron_temperature);
             electrons_mixed.set_pspec(index_injected_electrons);
             electrons_mixed.set_plfrac(fraction_nonthermal_electrons);
@@ -157,6 +158,7 @@ namespace bhjet
             double p_break = electrons_thermal.av_p();
 
             electrons_bpl = kariba::Bknpower(n_bins_e);
+            electrons_bpl.set_cutoff_type(cutoff_type);
             electrons_bpl.set_pspec1(-2.);
             electrons_bpl.set_pspec2(index_injected_electrons);
             electrons_bpl.set_p(0.1 * p_break, p_break, radiation_energy_density, magnetic_field, factor_break_electrons, radius, factor_max_energy_electrons);
@@ -186,6 +188,7 @@ namespace bhjet
             double p_min = electrons_thermal.av_p();
 
             electrons_pl = kariba::Powerlaw(n_bins_e);
+            electrons_pl.set_cutoff_type(cutoff_type);
             electrons_pl.set_pspec(index_injected_electrons);
             electrons_pl.set_p(p_min, radiation_energy_density, magnetic_field, factor_break_electrons, radius, factor_max_energy_electrons);
             electrons_pl.set_norm(electron_number_density);
@@ -413,7 +416,7 @@ namespace bhjet
             total_target_radiation_energy_density[i] = InvCompton.get_target_diff_spec()[i] * std::pow(total_target_radiation_energy_grid[i], 2);
         }
 
-        if (compton_calculation_necessary())
+        if (compton_calculation_necessary()) //legacy: compton switch
         {
             // this is the comp. expensive call
             InvCompton.compton_spectrum(gmin, gmax, spline_electrons, spline_electrons_accel);

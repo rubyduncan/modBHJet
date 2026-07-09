@@ -35,6 +35,7 @@ namespace bhjet
         double factor_max_energy_protons = defaults::DEFAULT_FACTOR_MAX_ENERGY_PROTONS;
         double index_injected_electrons = defaults::DEFAULT_INDEX_INJECTED_ELECTRONS;
         double index_injected_protons = defaults::DEFAULT_INDEX_INJECTED_PROTONS;
+        int cutoff_type = defaults::DEFAULT_CUTOFF_TYPE;
         bool calc_pair_content_from_plasma_beta = defaults::DEFAULT_CALC_PAIR_CONTENT_FROM_PLASMA_BETA;
         double plasma_beta_jet_base = defaults::DEFAULT_PLASMA_BETA_JET_BASE;
         double dlgz = defaults::DEFAULT_DLGZ;
@@ -74,7 +75,8 @@ namespace bhjet
             bool calc_pair_content_from_plasma_beta_ = defaults::DEFAULT_CALC_PAIR_CONTENT_FROM_PLASMA_BETA,
             double plasma_beta_jet_base_ = defaults::DEFAULT_PLASMA_BETA_JET_BASE,
             double dlgz_ = defaults::DEFAULT_DLGZ,
-            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL)
+            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL,
+            int cutoff_type_ = defaults::DEFAULT_CUTOFF_TYPE)
             : JetDynamics(defaults::DEFAULT_N_ZONES, verbosity_level_),
               mass_bh(mass_bh_),
               jet_power_eddington(jet_power_eddington_),
@@ -92,6 +94,7 @@ namespace bhjet
               factor_max_energy_electrons(factor_max_energy_electrons_),
               factor_max_energy_protons(factor_max_energy_protons_),
               index_injected_electrons(index_injected_electrons_), index_injected_protons(index_injected_protons_),
+              cutoff_type(cutoff_type_),
               calc_pair_content_from_plasma_beta(calc_pair_content_from_plasma_beta_),
               plasma_beta_jet_base(plasma_beta_jet_base_),
               dlgz(dlgz_)

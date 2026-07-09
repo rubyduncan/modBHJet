@@ -1,11 +1,11 @@
 [build-system]
-requires = ["scikit-build-core>=0.5.0", "pybind11", "setuptools"]
+requires = ["scikit-build-core>=0.5.0", "nanobind", "setuptools"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "bhjet"
 version = "0.1.0"
-description = "Jet dynamics simulation with pybind11 and Kariba backend"
+description = "Jet dynamics simulation with nanobind and Kariba backend"
 authors = [
   { name = "Your Name", email = "you@example.com" }
 ]
@@ -16,7 +16,7 @@ requires-python = ">=3.8"
 
 [tool.scikit-build]
 minimum-version = "0.5"
-build-dir = "build"
-cmake.source-dir = "."          # CMakeLists.txt handles src/ and libpython/
+build-dir = "build-pip"
+cmake.source-dir = "."          # CMakeLists.txt handles src/ and bindings/
 wheel.packages = ["python/bhjet"]     # point to the Python folder (contains __init__.py)
 sdist.include = ["python/bhjet"]      # include Python package in sdist

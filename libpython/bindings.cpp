@@ -48,7 +48,8 @@ using namespace bhjet;
     X(compton_switch, bool, defaults::DEFAULT_COMPTON_SWITCH, "True: Forces the Compton emission to be computed; False: Skips Compton emission computation", SEP_COMMA)                                                                     \
     X(compton_threshold, double, defaults::DEFAULT_COMPTON_THRESHOLD, "Internal rough threshold for Compton emission computation: L_com/L_syn > compton_threshold ? Do calculation. Otheriwse skip.", SEP_COMMA)                            \
     X(profile_time, bool, defaults::DEFAULT_PROFILE_TIME, "True: measures computation time of multiple emission processes; False: Does nothing", SEP_COMMA)                                                                                 \
-    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", ) // leave the last one empty
+    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", SEP_COMMA) \
+    X(cutoff_type, int, defaults::DEFAULT_CUTOFF_TYPE, "Particle cutoff shape. 0: exp(-x), 1: exp(-x^2), 2: sech(x)^2.", ) // leave the last one empty
 
 #define JETDYNAMICS_PARAMS                                \
     X(n_zones, size_t, defaults::DEFAULT_N_ZONES, SEP_COMMA) \
@@ -79,7 +80,8 @@ using namespace bhjet;
     X(calc_pair_content_from_plasma_beta, bool, defaults::DEFAULT_CALC_PAIR_CONTENT_FROM_PLASMA_BETA, "True: use the plasma beta variable to estimate the pair content (n_p/n_e) at the jet base; False: Assume same number density for electrons and protons and ignore plasma_beta_jet_base", SEP_COMMA)     \
     X(plasma_beta_jet_base, double, defaults::DEFAULT_PLASMA_BETA_JET_BASE, "Plasma beta value at z_jet_launching (the jet base)", SEP_COMMA)                                                                            \
     X(dlgz, double, defaults::DEFAULT_DLGZ, "log. grid spacing log10(z[i+1]) - log10(z[i])", SEP_COMMA) \
-    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", )
+    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", SEP_COMMA) \
+    X(cutoff_type, int, defaults::DEFAULT_CUTOFF_TYPE, "Particle cutoff shape. 0: exp(-x), 1: exp(-x^2), 2: sech(x)^2.", )
 
 #define ISOJET_PARAMS                                                                                                                                                                                                  \
     X(mass_bh, double, defaults::DEFAULT_MASS_BH, "Black hole mass in units of solar mass", SEP_COMMA)                                                                                                                   \
@@ -99,7 +101,8 @@ using namespace bhjet;
     X(index_injected_electrons, double, defaults::DEFAULT_INDEX_INJECTED_ELECTRONS, "Injected electron spectral index (dlogN/dlogE), ie. before cooling", SEP_COMMA)                                             \
     X(index_injected_protons, double, defaults::DEFAULT_INDEX_INJECTED_PROTONS, "Injected proton spectral index (dlogN/dlogE), ie. before cooling", SEP_COMMA)                                                   \
     X(dlgz, double, defaults::DEFAULT_DLGZ, "log. grid spacing log10(z[i+1]) - log10(z[i])", SEP_COMMA) \
-    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", )
+    X(verbosity_level, size_t, defaults::DEFAULT_VERBOSITY_LEVEL, "Regulates print output of the code. 0: No output; 1: Only important warnings; 2: More output; 3: Debugging output", SEP_COMMA) \
+    X(cutoff_type, int, defaults::DEFAULT_CUTOFF_TYPE, "Particle cutoff shape. 0: exp(-x), 1: exp(-x^2), 2: sech(x)^2.", )
 
 #define BHJET_PARAMS                                                                                                                                                 \
     X(theta_obs, double, defaults::DEFAULT_THETA_OBS, "Observation angle [degree]", SEP_COMMA)                                                                  \
@@ -190,6 +193,7 @@ PYBIND11_MODULE(bhjet, m)
     jetdyn.def("get_factor_max_energy_protons_grid", GET_ARGS_VEC(JetDynamics, get_factor_max_energy_protons_grid, double), "Get array of  scaling factors for proton acceleration rate, translating to an effective scaling of the maximum energy");
     jetdyn.def("get_index_injected_electrons_grid", GET_ARGS_VEC(JetDynamics, get_index_injected_electrons_grid, double), "Get array of injected electron spectral indices");
     jetdyn.def("get_index_injected_protons_grid", GET_ARGS_VEC(JetDynamics, get_index_injected_protons_grid, double), "Get array of injected proton spectral indices");
+    jetdyn.def("get_cutoff_type_grid", GET_ARGS_VEC(JetDynamics, get_cutoff_type_grid, int), "Get array of particle cutoff prescription types");
     jetdyn.def("info", &JetDynamics::info);
 
     py::class_<BLJet, JetDynamics, std::shared_ptr<BLJet>> bljet(m, "BLJet");

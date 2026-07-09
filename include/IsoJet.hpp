@@ -31,6 +31,7 @@ namespace bhjet
         double factor_max_energy_protons = defaults::DEFAULT_FACTOR_MAX_ENERGY_PROTONS;
         double index_injected_electrons = defaults::DEFAULT_INDEX_INJECTED_ELECTRONS;
         double index_injected_protons = defaults::DEFAULT_INDEX_INJECTED_PROTONS;
+        int cutoff_type = defaults::DEFAULT_CUTOFF_TYPE;
         double dlgz = defaults::DEFAULT_DLGZ;
 
         // internal variables
@@ -61,20 +62,22 @@ namespace bhjet
             double index_injected_electrons_ = defaults::DEFAULT_INDEX_INJECTED_ELECTRONS,
             double index_injected_protons_ = defaults::DEFAULT_INDEX_INJECTED_PROTONS,
             double dlgz_ = defaults::DEFAULT_DLGZ,
-            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL)
+            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL,
+            int cutoff_type_ = defaults::DEFAULT_CUTOFF_TYPE)
             : JetDynamics(defaults::DEFAULT_N_ZONES, verbosity_level_),
               mass_bh(mass_bh_),
               jet_power_eddington(jet_power_eddington_),
               z_jet_launching(z_jet_launching_), r_initial(r_initial_),
               z_dissipation(z_dissipation_), z_max_calculation(z_max_calculation_),
               electron_temperature_jet_base(electron_temperature_jet_base_),
+              plasma_beta_jet_base(plasma_beta_jet_base_),
               fraction_nonthermal_electrons(fraction_nonthermal_electrons_),
               fraction_nonthermal_protons(fraction_nonthermal_protons_),
               factor_break_electrons(factor_break_electrons_), factor_break_protons(factor_break_protons_),
               factor_max_energy_electrons(factor_max_energy_electrons_),
               factor_max_energy_protons(factor_max_energy_protons_),
               index_injected_electrons(index_injected_electrons_), index_injected_protons(index_injected_protons_),
-              plasma_beta_jet_base(plasma_beta_jet_base_),
+              cutoff_type(cutoff_type_),
               dlgz(dlgz_)
         {
         }

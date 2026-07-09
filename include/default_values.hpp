@@ -60,6 +60,7 @@ namespace bhjet {
         static constexpr double DEFAULT_FACTOR_MAX_ENERGY_PROTONS = 1.;
         static constexpr double DEFAULT_INDEX_INJECTED_ELECTRONS = 2.;
         static constexpr double DEFAULT_INDEX_INJECTED_PROTONS = 2.;
+        static constexpr int DEFAULT_CUTOFF_TYPE = 0;
         static constexpr bool DEFAULT_INCLUDE_COUNTERJET = true;
         static constexpr bool DEFAULT_FORCE_COMPTON_CALCULATION = false;
         static constexpr bool DEFAULT_COMPTON_SWITCH = true;

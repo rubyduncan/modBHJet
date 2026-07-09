@@ -99,7 +99,8 @@ namespace bhjet
                 jet_dynamics->get_index_injected_electrons_grid()[i],
                 jet_dynamics->get_index_injected_protons_grid()[i],
                 include_counterjet, force_compton, compton_switch,
-                compton_threshold, profile_time, verbosity_level);
+                compton_threshold, profile_time, verbosity_level,
+                jet_dynamics->get_cutoff_type_grid()[i]);
             
             if (verbosity_level > 2)
                 std::cout << "Adding targets in zone " << i << std::endl;

@@ -74,6 +74,7 @@ namespace bhjet
             factor_break_electrons, factor_break_protons,
             factor_max_energy_electrons, factor_max_energy_protons,
             index_injected_electrons, index_injected_protons;
+        int cutoff_type;
         std::string geometry;
         bool include_counterjet = defaults::DEFAULT_INCLUDE_COUNTERJET;
         bool force_compton_calculation = defaults::DEFAULT_FORCE_COMPTON_CALCULATION;
@@ -136,7 +137,8 @@ namespace bhjet
             bool compton_switch_ = defaults::DEFAULT_COMPTON_SWITCH,
             double compton_threshold_ = defaults::DEFAULT_COMPTON_THRESHOLD,
             bool profile_time_ = defaults::DEFAULT_PROFILE_TIME,
-            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL)
+            size_t verbosity_level_ = defaults::DEFAULT_VERBOSITY_LEVEL,
+            int cutoff_type_ = defaults::DEFAULT_CUTOFF_TYPE)
             : magnetic_field(magnetic_field_), radius(radius_), height(height_), geometry(geometry_),
               bulk_momentum(bulk_momentum_), theta_obs(theta_obs_), distance(distance_),
               redshift(redshift_), electron_number_density(electron_number_density_),
@@ -148,6 +150,7 @@ namespace bhjet
               factor_max_energy_electrons(factor_max_energy_electrons_),
               factor_max_energy_protons(factor_max_energy_protons_),
               index_injected_electrons(index_injected_electrons_), index_injected_protons(index_injected_protons_),
+              cutoff_type(cutoff_type_),
               include_counterjet(include_counterjet_),
               force_compton_calculation(force_compton_calculation_), compton_switch(compton_switch_),
               compton_threshold(compton_threshold_),

@@ -77,6 +77,9 @@ namespace bhjet
             index_injected_electrons_grid,      // spectral index of electron differential energy spectrum
             index_injected_protons_grid;        // spectral index of proton differential energy spectrum
 
+        std::vector<int>
+            cutoff_type_grid;                   // particle cutoff prescription switch
+
         virtual void reinit_grid_arrays();
 
         virtual void compute_jet_dynamics();
@@ -103,6 +106,7 @@ namespace bhjet
         virtual std::vector<double> get_factor_max_energy_protons_grid();
         virtual std::vector<double> get_index_injected_electrons_grid();
         virtual std::vector<double> get_index_injected_protons_grid();
+        virtual std::vector<int> get_cutoff_type_grid();
     };
 
 } // namespace bhjet

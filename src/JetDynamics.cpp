@@ -40,6 +40,7 @@ namespace bhjet
         factor_max_energy_protons_grid = std::vector<double>(n_zones, 0.0);
         index_injected_electrons_grid = std::vector<double>(n_zones, 0.0);
         index_injected_protons_grid = std::vector<double>(n_zones, 0.0);
+        cutoff_type_grid = std::vector<int>(n_zones, defaults::DEFAULT_CUTOFF_TYPE);
     }
 
     std::vector<double> JetDynamics::get_z_min_grid()
@@ -161,6 +162,12 @@ namespace bhjet
         if (verbosity_level > 1)
             std::cout << "JetDynamics: get_index_injected_protons_grid" << std::endl;
         return index_injected_protons_grid;
+    }
+    std::vector<int> JetDynamics::get_cutoff_type_grid()
+    {
+        if (verbosity_level > 1)
+            std::cout << "JetDynamics: get_cutoff_type_grid" << std::endl;
+        return cutoff_type_grid;
     }
 
 } // namespace bhjet

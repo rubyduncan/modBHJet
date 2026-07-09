@@ -302,6 +302,7 @@ namespace bhjet
         factor_max_energy_protons_grid[i] = factor_max_energy_protons;
         index_injected_electrons_grid[i] = index_injected_electrons;
         index_injected_protons_grid[i] = index_injected_protons;
+        cutoff_type_grid[i] = cutoff_type;
     }
 
 } // namespace bhjet

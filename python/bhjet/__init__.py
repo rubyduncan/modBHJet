@@ -1,1 +1,1 @@
-from .bhjet import *  # import all pybind11 classes/functions into package
+from .bhjet import *  # import all nanobind classes/functions into package
