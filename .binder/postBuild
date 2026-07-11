@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "${REPO_DIR:-$PWD}"
+test -d ../kariba || git clone --depth 1 https://github.com/rubyduncan/kariba.git ../kariba
+python -m pip install --upgrade pip
+python -m pip install -v .

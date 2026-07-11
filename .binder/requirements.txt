@@ -1,0 +1,7 @@
+astropy
+gammapy
+ipykernel
+jupyterlab
+matplotlib
+numpy
+scipy

@@ -10,6 +10,9 @@ __pycache__/
 # CMake build directories
 build/
 build-nb/
+build-pip/
+docs/_build/
+docs/tutorials/notebooks/
 
 # Python distribution artifacts
 dist/

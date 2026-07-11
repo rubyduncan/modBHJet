@@ -1,0 +1,20 @@
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+  apt_packages:
+    - doxygen
+    - graphviz
+  jobs:
+    pre_build:
+      - test -d ../kariba || git clone --depth 1 https://github.com/rubyduncan/kariba.git ../kariba
+      - cd docs && doxygen Doxyfile
+
+sphinx:
+  configuration: docs/conf.py
+
+python:
+  install:
+    - requirements: docs/requirements.txt

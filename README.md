@@ -2,17 +2,17 @@ This is the restructured BHJet version
 
 ## To-do's
 - [X] cut-off in kariba + here (Ruby?) 
-- [ ] single zone particle cutoff shape test/proof 
+- [X] single zone particle cutoff shape test/proof 
 - [ ] shock: temperature jump (Ruby?)
 - [ ] f_pl scaling (Ruby?)
 - [ ] photon time scale example plot (e.g. particle cooling plot) with sa break
-- [ ] move DEFAULTs all to one file (default_values.hpp)
+- [X] move DEFAULTs all to one file (default_values.hpp)
 - [ ] disk + AGN target fields (Ruby?)
 - [ ] adding agnjet jet dynamics (Ruby?)
 - [ ] double check Compton switch (Marc/Ruby?)
 - [ ] hadronic interactions (Ruby/Dimitris)
 - [ ] integrate MLjet (Dimitris?)
-- [ ] switch to nanobind + litgen (= remove the pybind file)
+- [X] switch to nanobind + litgen (= remove the pybind file)
 
 ## Installation
 We suggest to use a micromamba environment (which works similar to conda/miniconda/mamba - just exchange micromamba with e.g. conda in the commands).
