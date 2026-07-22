@@ -1,0 +1,127 @@
+components:
+-   name: bhjet
+    type: SkyModel
+    spectral:
+        type: BHJetSpectralModel
+        parameters:
+        -   name: mass_bh
+            value: 5e8
+            frozen: True
+
+        -   name: jet_power_eddington
+            value: 2e-3
+            min: 9e-4
+            max: 5e-3
+
+        -   name: z_jet_launching
+            value: 2.0
+            frozen: True
+
+        -   name: r_initial
+            value: 9.0
+            min: 2.0
+            max: 15.0
+            
+        -   name: z_end_of_acceleration
+            value: 100
+            min: 30
+            max: 200
+
+        -   name: z_dissipation
+            value: 100.0
+            min: 30
+            max: 200
+
+        -   name: z_max_calculation
+            value: 1000000.0
+            frozen: True
+
+        -   name: sigma_final
+            value: 0.1
+            min: 1e-4
+            max: 1
+
+        -   name: gamma_final
+            value: 2.1
+            frozen: True
+
+        -   name: electron_temperature_jet_base
+            value: 500 
+            min: 400
+            max: 1200
+
+        -   name: gamma_acceleration_exponent
+            value: 0.2
+            frozen: True
+
+        -   name: opening_angle_constant
+            value: 0.15
+            frozen: True
+
+        -   name: fraction_nonthermal_electrons
+            value: 0.5
+            frozen: True
+
+        -   name: fraction_nonthermal_protons
+            value: 0.1
+            frozen: True
+
+        -   name: factor_break_electrons
+            value: 0.1
+            frozen: True
+
+        -   name: factor_break_protons
+            value: 1.0
+            frozen: True
+
+        -   name: factor_max_energy_electrons
+            value: 8e-9
+            min: 1e-9
+            max: 5e-7
+
+        -   name: factor_max_energy_protons
+            value: 1.0
+            frozen: True
+
+        -   name: index_injected_electrons
+            value: 1.75
+            min: 1.5
+            max: 2.5
+            
+        -   name: index_injected_protons
+            value: 2.0
+            frozen: True
+
+        -   name: plasma_beta_jet_base
+            value: 0.02
+            frozen: True
+
+        -   name: dlgz
+            value: 0.1
+            frozen: True
+
+        -   name: cutoff_type
+            value: 0.0
+            frozen: True
+
+        -   name: theta_obs
+            value: 66.0
+            frozen: True
+
+        -   name: distance
+            value: 29400.0
+            frozen: True
+
+        -   name: redshift
+            value: 0.007465
+            frozen: True
+
+        -   name: compton_threshold
+            value: 1.0e-05
+            frozen: True
+
+covariance: ngc4261_test_covariance.dat
+metadata:
+    creator: Gammapy 2.1
+    date: '2026-07-21T13:24:04.101214'
+    origin: null

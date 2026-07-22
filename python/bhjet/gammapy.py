@@ -1,11 +1,24 @@
+from functools import lru_cache
 import astropy.units as u
 import numpy as np
 import time
-
 from gammapy.modeling import Parameter
-from gammapy.modeling.models import SpectralModel
+from gammapy.modeling.models import SPECTRAL_MODEL_REGISTRY, SpectralModel
 
 from . import BHJet, BLJet
+
+
+SOLVER_ENERGY_MIN = 1e-8 * u.eV
+SOLVER_ENERGY_MAX = 1e12 * u.eV
+SOLVER_ENERGY_DEX_STEP = 0.1
+
+SOLVER_ENERGY_GRID = 10 ** np.arange(
+    np.log10(SOLVER_ENERGY_MIN.to_value(u.eV)),
+    np.log10(SOLVER_ENERGY_MAX.to_value(u.eV)) + SOLVER_ENERGY_DEX_STEP,
+    SOLVER_ENERGY_DEX_STEP,
+) * u.eV
+SOLVER_ENERGY_GRID_ERG = SOLVER_ENERGY_GRID.to_value(u.erg)
+
 
 class BHJetSpectralModel(SpectralModel):
     '''Spectral model for BHJet -  accepts photon energies as an Astropy object, 
@@ -74,7 +87,146 @@ class BHJetSpectralModel(SpectralModel):
 
 
     @staticmethod
-    def evaluate(energy,
+    def _compute_jet(**parameters):
+        
+        # t0 = time.perf_counter()
+
+        dynamics = build_bljet(
+            mass_bh=parameters["mass_bh"],
+            jet_power_eddington=parameters["jet_power_eddington"],
+            z_jet_launching=parameters["z_jet_launching"],
+            r_initial=parameters["r_initial"],
+            z_end_of_acceleration=parameters["z_end_of_acceleration"],
+            z_dissipation=parameters["z_dissipation"],
+            z_max_calculation=parameters["z_max_calculation"],
+            sigma_final=parameters["sigma_final"],
+            gamma_final=parameters["gamma_final"],
+            electron_temperature_jet_base=parameters["electron_temperature_jet_base"],
+            gamma_acceleration_exponent=parameters["gamma_acceleration_exponent"],
+            opening_angle_constant=parameters["opening_angle_constant"],
+            fraction_nonthermal_electrons=parameters["fraction_nonthermal_electrons"],
+            fraction_nonthermal_protons=parameters["fraction_nonthermal_protons"],
+            factor_break_electrons=parameters["factor_break_electrons"],
+            factor_break_protons=parameters["factor_break_protons"],
+            factor_max_energy_electrons=parameters["factor_max_energy_electrons"],
+            factor_max_energy_protons=parameters["factor_max_energy_protons"],
+            index_injected_electrons=parameters["index_injected_electrons"],
+            index_injected_protons=parameters["index_injected_protons"],
+            plasma_beta_jet_base=parameters["plasma_beta_jet_base"],
+            dlgz=parameters["dlgz"],
+            cutoff_type=parameters["cutoff_type"],
+
+        )
+
+        # t1 = time.perf_counter()
+
+        jet = BHJet(
+            theta_obs=float(parameters["theta_obs"].value),
+            distance=float(parameters["distance"].value),
+            redshift=float(parameters["redshift"].value),
+            include_counterjet=True,
+            compton_threshold=float(parameters["compton_threshold"].value),
+            profile_time=False,
+            verbosity_level=0,
+        )
+        jet.init_jet_dynamics(dynamics)
+
+        # t2 = time.perf_counter()
+
+        # t3 = time.perf_counter()
+
+        photon_energy_grid = [float(value) for value in SOLVER_ENERGY_GRID_ERG]
+        jet.compute_full_jet(photon_energy_grid=photon_energy_grid)
+
+        # t4 = time.perf_counter()
+        
+        # print(f"BLJet construction: {t1-t0:.4f} s")
+        # print(f"BHJet construction: {t2-t1:.4f} s")
+        # print(f"energy_shape:   {t3-t2:.4f} s")
+        # print(f"compute_full_jet:  {t4-t3:.4f} s")
+        
+        return jet, dynamics
+
+
+    def _solution_cache_key(self, **parameters):
+        ''' Make a key for the fixed solver grid and current model parameters. '''
+
+        energy_grid_key = (
+            SOLVER_ENERGY_MIN.to_value(u.eV),
+            SOLVER_ENERGY_MAX.to_value(u.eV),
+            SOLVER_ENERGY_DEX_STEP,
+        )
+        parameter_key = tuple(
+            (name, float(parameter.value))
+            for name, parameter in sorted(parameters.items())
+        )
+
+        return energy_grid_key, parameter_key
+
+
+    def _get_jet(self, **parameters):
+        ''' Reuse the most recent BHJet solution when the inputs are unchanged. '''
+
+        cache_key = self._solution_cache_key(**parameters)
+
+        if cache_key == getattr(self, "_last_solution_key", None):
+            return self._last_solution
+
+        solution = self._compute_jet(**parameters)
+        self._last_solution_key = cache_key
+        self._last_solution = solution
+
+        return solution
+
+
+    @staticmethod
+    def _interpolate_flux(energy, flux):
+        ''' Interpolate a fixed-grid BHJet flux to requested energies. '''
+
+        energy_shape = energy.shape
+        requested_energy_erg = np.asarray(
+            energy.to_value(u.erg),
+            dtype=float,
+        )
+        requested_energy_erg = np.atleast_1d(requested_energy_erg).reshape(-1)
+        flux = np.asarray(flux, dtype=float)
+
+        interpolated_flux = np.zeros_like(requested_energy_erg)
+        valid = requested_energy_erg > 0
+        safe_flux = np.where(
+            np.isfinite(flux) & (flux > 0),
+            flux,
+            1e-100,
+        )
+
+        interpolated_flux[valid] = np.exp(
+            np.interp(
+                np.log(requested_energy_erg[valid]),
+                np.log(SOLVER_ENERGY_GRID_ERG),
+                np.log(safe_flux),
+                left=-1e100,
+                right=-1e100,
+            )
+        )
+
+        if energy_shape == ():
+            return interpolated_flux[0]
+
+        return interpolated_flux.reshape(energy_shape)
+
+
+    def __getstate__(self):
+        ''' Do not copy the transient C++ BHJet cache with a model. '''
+
+        state = self.__dict__.copy()
+        state.pop("_last_solution_key", None)
+        state.pop("_last_solution", None)
+
+        return state
+
+
+    def evaluate(self,
+        energy,
         mass_bh,
         jet_power_eddington,
         z_jet_launching,
@@ -104,76 +256,123 @@ class BHJetSpectralModel(SpectralModel):
         compton_threshold,
     ):
         
-        # t0 = time.perf_counter()
-
-        dynamics = build_bljet(
-            mass_bh=mass_bh,
-            jet_power_eddington=jet_power_eddington,
-            z_jet_launching=z_jet_launching,
-            r_initial=r_initial,
-            z_end_of_acceleration=z_end_of_acceleration,
-            z_dissipation=z_dissipation,
-            z_max_calculation=z_max_calculation,
-            sigma_final=sigma_final,
-            gamma_final=gamma_final,
-            electron_temperature_jet_base=electron_temperature_jet_base,
-            gamma_acceleration_exponent=gamma_acceleration_exponent,
-            opening_angle_constant=opening_angle_constant,
-            fraction_nonthermal_electrons=fraction_nonthermal_electrons,
-            fraction_nonthermal_protons=fraction_nonthermal_protons,
-            factor_break_electrons=factor_break_electrons,
-            factor_break_protons=factor_break_protons,
-            factor_max_energy_electrons=factor_max_energy_electrons,
-            factor_max_energy_protons=factor_max_energy_protons,
-            index_injected_electrons=index_injected_electrons,
-            index_injected_protons=index_injected_protons,
-            plasma_beta_jet_base=plasma_beta_jet_base,
-            dlgz=dlgz,
-            cutoff_type=cutoff_type,
-
-        )
-
-        # t1 = time.perf_counter()
-
-        jet = BHJet(
-            theta_obs=float(theta_obs.value),
-            distance=float(distance.value),
-            redshift=float(redshift.value),
-            include_counterjet=True,
-            compton_threshold=float(compton_threshold.value),
-            profile_time=False,
-            verbosity_level=0,
-        )
-
-        jet.init_jet_dynamics(dynamics)
-
-        # t2 = time.perf_counter()
-
-    # bhjet is expecting an energy grid in ergs
-        energy_shape = energy.shape
-        energy_erg = np.atleast_1d(np.asarray(energy.to_value(u.erg), dtype=float))
-
-    # #will compute photon energies also using the erg grid 
-        jet.compute_full_jet(photon_energy_grid=energy_erg.tolist())
-
-        # t3 = time.perf_counter()
+        parameters = locals()
+        parameters.pop("self")
+        parameters.pop("energy")
+        jet, dynamics = self._get_jet(**parameters)
 
     #the photon total flux from bhjet is returned as E dN/dE in cm-2 s-1
-        e_dnde = np.asarray(jet.get_observed_photon_flux_total(),dtype=float)
-        dnde = e_dnde / energy_erg #then this needs to be converted to number flux 
+        e_dnde = self._interpolate_flux(
+            energy,
+            jet.get_observed_photon_flux_total(),
+        )
+        dnde = e_dnde / energy.to_value(u.erg) #then this needs to be converted to number flux 
         number_flux = dnde * u.Unit("cm-2 s-1 erg-1")
 
-        # t4 = time.perf_counter()
-
-        if energy_shape == ():
-            return number_flux[0]
-        
-        # print(f"BLJet construction: {t1-t0:.4f} s")
-        # print(f"BHJet construction: {t2-t1:.4f} s")
-        # print(f"compute_full_jet:   {t3-t2:.4f} s")
-        # print(f"Output conversion:  {t4-t3:.4f} s")
-        
         return number_flux
+
+
+    def evaluate_components(self, energy):
+
+        ''' Calculate the individual BHJet components as E dN/dE. '''
+
+        parameters = {parameter.name: parameter for parameter in self.parameters} 
+        jet, dynamics = self._get_jet(**parameters)
+
+        z_dissipation_cm = dynamics.z_dissipation * dynamics.r_g
+        z_max_calculation_cm = dynamics.z_max_calculation * dynamics.r_g
+        flux_unit = u.Unit("cm-2 s-1")
+
+        def get_flux(getter, *args):
+            return self._interpolate_flux(energy, getter(*args)) * flux_unit
+
+        outputs = {
+            "pre_syn": get_flux(
+                jet.get_observed_photon_integrated_flux_electron_cyclosyn,
+                0.0,
+                z_dissipation_cm,
+            ),
+            "pre_com": get_flux(
+                jet.get_observed_photon_integrated_flux_electron_compton,
+                0.0,
+                z_dissipation_cm,
+            ),
+            "post_syn": get_flux(
+                jet.get_observed_photon_integrated_flux_electron_cyclosyn,
+                z_dissipation_cm,
+                z_max_calculation_cm,
+            ),
+            "post_com": get_flux(
+                jet.get_observed_photon_integrated_flux_electron_compton,
+                z_dissipation_cm,
+                z_max_calculation_cm,
+            ),
+            "total": get_flux(jet.get_observed_photon_flux_total),
+        }
+
+        return outputs
+
+
+    def plot_components(
+        self,
+        energy_bounds,
+        ax=None,
+        n_points=200,
+        energy_power=2,
+        components=None,
+    ):
+        ''' Plot the individual BHJet components. '''
+
+        energy_bounds = u.Quantity(energy_bounds)
+
+        if energy_bounds.size != 2:
+            raise ValueError("energy_bounds must contain exactly two energies.")
+
+        energy_min, energy_max = energy_bounds
+        energy = np.geomspace(
+            energy_min.to_value(energy_bounds.unit),
+            energy_max.to_value(energy_bounds.unit),
+            n_points,
+        ) * energy_bounds.unit
+
+        outputs = self.evaluate_components(energy)
+
+        styles = {
+            "pre_syn": {"color": "tab:blue", "label": "pre syn"},
+            "pre_com": {"color": "tab:green", "label": "pre com"},
+            "post_syn": {"color": "tab:orange", "label": "post syn"},
+            "post_com": {"color": "tab:red", "label": "post com"},
+            "total": {"color": "k", "ls": "--", "label": "total"},
+        }
+
+        if components is None:
+            components = styles.keys()
+
+        if ax is None:
+            import matplotlib.pyplot as plt
+
+            _, ax = plt.subplots()
+
+        for name in components:
+            if name not in outputs:
+                raise ValueError(f"Unknown BHJet component: {name}")
+
+            flux = energy ** (energy_power - 1) * outputs[name]
+
+            if energy_power == 0:
+                flux = flux.to("cm-2 s-1 TeV-1")
+            elif energy_power == 1:
+                flux = flux.to("cm-2 s-1")
+            elif energy_power == 2:
+                flux = flux.to("erg cm-2 s-1")
+
+            ax.loglog(
+                energy.to_value(energy.unit),
+                flux.to_value(flux.unit),
+                **styles[name],
+            )
+
+        return ax
     
 
 def parameter_value(parameter):
@@ -256,3 +455,7 @@ def build_bljet(
         cutoff_type=int(cutoff_type.value),
         calc_pair_content_from_plasma_beta=False,
     )
+
+
+if BHJetSpectralModel not in SPECTRAL_MODEL_REGISTRY:
+    SPECTRAL_MODEL_REGISTRY.append(BHJetSpectralModel)
