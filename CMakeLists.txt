@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 # I added this only for unsuccesful profiling attempts
 # set(CMAKE_BUILD_TYPE Debug)
 # add_compile_options(-g)
@@ -14,6 +18,30 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(nanobind CONFIG REQUIRED)
 find_package(GSL REQUIRED)
+find_package(OpenMP QUIET COMPONENTS CXX)
+
+if(OpenMP_CXX_FOUND)
+    set(BHJET_OPENMP_TARGET OpenMP::OpenMP_CXX)
+elseif(APPLE)
+    find_library(BHJET_OMP_LIBRARY
+        NAMES omp
+        HINTS "$ENV{CONDA_PREFIX}/lib"
+    )
+
+    if(NOT BHJET_OMP_LIBRARY)
+        message(FATAL_ERROR
+            "OpenMP was not found. Install llvm-openmp in the active Conda environment "
+            "or configure CMake with a compiler that provides OpenMP."
+        )
+    endif()
+
+    add_library(bhjet_openmp INTERFACE)
+    target_compile_options(bhjet_openmp INTERFACE -Xpreprocessor -fopenmp)
+    target_link_libraries(bhjet_openmp INTERFACE "${BHJET_OMP_LIBRARY}")
+    set(BHJET_OPENMP_TARGET bhjet_openmp)
+else()
+    message(FATAL_ERROR "OpenMP C++ support is required to build BHJet.")
+endif()
 
 # Fetch Kariba from github
 # include(FetchContent)
@@ -67,7 +95,7 @@ target_compile_options(bhjet PRIVATE -Wall -Wextra -Wpedantic)
 target_include_directories(bhjet PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Link Kariba and other libraries
-target_link_libraries(bhjet PRIVATE kariba_lib GSL::gsl GSL::gslcblas)
+target_link_libraries(bhjet PRIVATE kariba_lib GSL::gsl GSL::gslcblas ${BHJET_OPENMP_TARGET})
 if(UNIX)
     target_link_libraries(bhjet PRIVATE m)
 endif()
