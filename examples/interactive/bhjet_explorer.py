@@ -300,8 +300,8 @@ class BHJetExplorer:
 
     def _draw_jet_shape(self):
         bl   = self._active_bljet
-        logz = np.log10(bl.get_z_center_grid() / bl.r_g)
-        logr = np.log10(bl.get_radius_grid()   / bl.r_g)
+        logz = np.log10(np.asarray(bl.get_z_center_grid(), dtype=float) / bl.r_g)
+        logr = np.log10(np.asarray(bl.get_radius_grid(), dtype=float)   / bl.r_g)
         self._jet_shape_line.set_data(logr, logz)
 
         self.cax.set_xlim(max(logr) + 0.5, min(logr) - 0.5)
@@ -385,8 +385,8 @@ class BHJetExplorer:
         bb  = self._active_bb
         rad = bj.radiation_zones[izone]
 
-        logz = np.log10(bl.get_z_center_grid() / bl.r_g)
-        logr = np.log10(bl.get_radius_grid()   / bl.r_g)
+        logz = np.log10(np.asarray(bl.get_z_center_grid(), dtype=float) / bl.r_g)
+        logr = np.log10(np.asarray(bl.get_radius_grid(), dtype=float)   / bl.r_g)
         self._zone_marker.set_data([logr[izone]], [logz[izone]])
 
         z_rg = bl.get_z_center_grid()[izone] / bl.r_g
@@ -441,8 +441,9 @@ class BHJetExplorer:
         mom_zone = np.array(rad.get_electron_momentum_grid())
         p_lo = mom_zone[0]  * erg2eV * c_cm_s
         p_hi = mom_zone[-1] * erg2eV * c_cm_s
-        self._zc_momspan.set_x(p_lo)
-        self._zc_momspan.set_width(p_hi - p_lo)
+        self._zc_momspan.set_xy([
+            [p_lo, 0], [p_lo, 1], [p_hi, 1], [p_hi, 0], [p_lo, 0],
+        ])
 
         # panel 3: electron distribution
         dn_dp = np.array(rad.get_electron_momentum_number_density())
