@@ -21,4 +21,4 @@ dependencies:
   - ipympl=0.9
   - nbclient=0.10
   - scikit-build-core=0.10.7
-  - nanobind=2.6.0
+  - nanobind=2.6.1
