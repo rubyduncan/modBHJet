@@ -1,31 +1,33 @@
-# Interactive Demo
+# Interactive tutorial
 
-The first interactive layer should use notebooks rather than a custom web app.
-This keeps the documentation build reliable while still giving users a way to
-change parameters and plot spectra.
+The public entry point is a JupyterLab tutorial. It provides a guided BHJet and
+Gammapy exercise, a widget-based parameter explorer, and links to the advanced
+notebooks. The tutorial contains only public, versioned example data.
 
 ## Binder launch
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/main?labpath=examples/starting/bhjet_pilot.ipynb)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb)
 
-The default public demo opens the pilot notebook:
+The launch URL deliberately references the immutable `tutorial-v0.1.0` release
+tag instead of `main`:
 
 ```text
-https://mybinder.org/v2/gh/rubyduncan/modBHJet/main?labpath=examples/starting/bhjet_pilot.ipynb
+https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb
 ```
 
-Recommended demo notebooks:
+Before publishing this link, create and push the named tag only after the
+`Tutorial image` workflow has passed. Each later tutorial release must update
+both occurrences of the tag in this page.
 
-- `examples/starting/bhjet_pilot.ipynb`
-- `examples/starting/gammapy_intro.ipynb`
+## Classroom use
 
-## Future web app boundary
+MyBinder is an excellent public try-it link, but it is an ephemeral volunteer
+service and should not be the only platform for a scheduled school. It has a
+100-session limit per repository, does not retain user files, and can require
+an event quota request. Use the same tested image in a managed JupyterHub for a
+classroom event; the exact handoff is in
+{doc}`../deployment/tutorial-hosting`.
 
-A future app should treat BHJet as a model service with:
-
-- a parameter schema matching `BLJet`, `BHJet`, and target photon fields
-- an observed energy grid input
-- optional uploaded flux points
-- a spectrum output table containing energy, total flux, and selected components
-
-The web app should be separate from the static documentation site.
+Participants should download notebooks or results they want to keep before
+their session ends. Do not put private data, credentials, or participant data
+in this public repository.

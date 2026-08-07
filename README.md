@@ -1,5 +1,20 @@
 This is the restructured BHJet version
 
+## Try the tutorial online
+
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb)
+
+The public tutorial opens a guided BHJet/Gammapy notebook, an interactive
+explorer, and the bundled NGC 4261 data without requiring a local installation.
+The URL is intentionally pinned to the `tutorial-v0.1.0` release tag. Maintainers
+must create and push that tag only after the `Tutorial image` GitHub Actions
+workflow has succeeded; later releases should update this badge to their new
+immutable tag.
+
+MyBinder sessions are temporary and public. For a school or other scheduled
+event, use the same release image in a managed JupyterHub; see
+[`docs/deployment/tutorial-hosting.md`](docs/deployment/tutorial-hosting.md).
+
 ## To-do's
 - [X] cut-off in kariba + here (Ruby?) 
 - [X] single zone particle cutoff shape test/proof 

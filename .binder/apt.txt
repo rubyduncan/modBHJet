@@ -1,4 +1,1 @@
-cmake
-g++
-libgsl-dev
-make
+git

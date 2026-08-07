@@ -26,9 +26,11 @@ Use the `BHJetSpectralModel` wrapper for data/model comparison workflows.
 
 ## Existing notebooks
 
+- `tutorials/00_welcome.ipynb` — Binder/JupyterHub landing page
+- `tutorials/01_bhjet_gammapy.ipynb` — guided, data-backed exercise
+- `tutorials/02_interactive_explorer.ipynb` — widget-based parameter explorer
 - `examples/python_classes/bljet_dynamics_example.ipynb`
 - `examples/python_classes/single_zone_example.ipynb`
 - `examples/python_classes/bhjet_example.ipynb`
-- `examples/starting/bhjet_pilot.ipynb`
-- `examples/starting/gammapy_intro.ipynb`
-- `examples/starting/gammapy_bhjet_comparison.ipynb`
+- `examples/gammapy/gammapy_intro.ipynb` — advanced development example
+- `examples/gammapy/gammapy_bhjet_comparison.ipynb` — advanced development example

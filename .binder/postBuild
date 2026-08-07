@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "${REPO_DIR:-$PWD}"
-test -d ../kariba || git clone --depth 1 https://github.com/rubyduncan/kariba.git ../kariba
-python -m pip install --upgrade pip
-python -m pip install -v .
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+KARIBA_REVISION="6ca6968adf8568e99b2010212fd1419a79d94d35"
+KARIBA_DIR="$(dirname "$REPO_ROOT")/kariba"
+
+# CMake expects Kariba next to the modBHJet checkout.  Keep the tutorial
+# environment reproducible by checking out the exact revision used for the
+# release rather than the moving default branch.
+if [[ ! -d "$KARIBA_DIR/.git" ]]; then
+    git clone https://github.com/rubyduncan/kariba.git "$KARIBA_DIR"
+fi
+git -C "$KARIBA_DIR" fetch --depth 1 origin "$KARIBA_REVISION"
+git -C "$KARIBA_DIR" checkout --detach "$KARIBA_REVISION"
+
+python -m pip install --no-build-isolation -v "$REPO_ROOT"
+python "$REPO_ROOT/tutorials/smoke_test.py"

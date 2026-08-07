@@ -17,5 +17,6 @@ and returns differential photon flux with units compatible with Gammapy.
 
 Use the starting notebooks for concrete workflows:
 
-- `examples/starting/gammapy_intro.ipynb`
-- `examples/starting/gammapy_bhjet_comparison.ipynb`
+- `tutorials/01_bhjet_gammapy.ipynb` for the Binder-safe guided exercise
+- `examples/gammapy/gammapy_intro.ipynb` for the advanced introduction
+- `examples/gammapy/gammapy_bhjet_comparison.ipynb` for the advanced comparison

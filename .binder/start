@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# A tutorial has many independent users.  Prevent one notebook kernel from
+# claiming every core on its node through OpenMP or BLAS worker pools.
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
+export NUMEXPR_NUM_THREADS="${NUMEXPR_NUM_THREADS:-1}"
+
+exec "$@"

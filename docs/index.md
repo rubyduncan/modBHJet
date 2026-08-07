@@ -36,6 +36,7 @@ tutorials/full-spectrum
 tutorials/cutoff-comparison
 tutorials/gammapy
 tutorials/interactive-demo
+deployment/tutorial-hosting
 ```
 
 ```{toctree}
