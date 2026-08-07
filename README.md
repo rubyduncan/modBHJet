@@ -2,14 +2,13 @@ This is the restructured BHJet version
 
 ## Try the tutorial online
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/00_welcome.ipynb)
 
 The public tutorial opens a guided BHJet/Gammapy notebook, an interactive
 explorer, and the bundled NGC 4261 data without requiring a local installation.
-The URL is intentionally pinned to the `tutorial-v0.1.0` release tag. Maintainers
-must create and push that tag only after the `Tutorial image` GitHub Actions
-workflow has succeeded; later releases should update this badge to their new
-immutable tag.
+This development link follows the `bhjet_tutorial` branch. Once it has passed
+its checks, replace the branch name in the badge with an immutable release tag
+such as `tutorial-v0.1.0`, then use that tagged link for a school or publication.
 
 MyBinder sessions are temporary and public. For a school or other scheduled
 event, use the same release image in a managed JupyterHub; see

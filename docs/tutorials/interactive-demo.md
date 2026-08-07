@@ -6,18 +6,17 @@ notebooks. The tutorial contains only public, versioned example data.
 
 ## Binder launch
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/00_welcome.ipynb)
 
-The launch URL deliberately references the immutable `tutorial-v0.1.0` release
-tag instead of `main`:
+The current development launch URL follows the `bhjet_tutorial` branch:
 
 ```text
-https://mybinder.org/v2/gh/rubyduncan/modBHJet/tutorial-v0.1.0?urlpath=lab/tree/tutorials/00_welcome.ipynb
+https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/00_welcome.ipynb
 ```
 
-Before publishing this link, create and push the named tag only after the
-`Tutorial image` workflow has passed. Each later tutorial release must update
-both occurrences of the tag in this page.
+Before publishing a stable tutorial link, create and push a release tag only
+after the `Tutorial image` workflow has passed. Replace `bhjet_tutorial` in the
+badge and URL above with that tag (for example, `tutorial-v0.1.0`).
 
 ## Classroom use
 
