@@ -1,10 +1,10 @@
 
 ## Link to the online notebook: 
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/00_welcome.ipynb)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/welcome.ipynb)
 
 The public tutorial includes an overview of what BHJet calculates with an interactive
-notebook to change parameters, and a test of fitting a BHJet spectral energy distribution to M87 data. Binder sessions are temporary and public, anything that you produce and want to save needs to be downloaded. 
+notebook to change parameters, and a BHJet-only exercise that compares one-zone and multi-zone models with the bundled NGC 4261 spectral energy distribution. Binder sessions are temporary and public, anything that you produce and want to save needs to be downloaded.
 
 ## Installation
 

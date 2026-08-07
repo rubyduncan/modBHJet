@@ -65,9 +65,9 @@ jobs:
             -lc 'jupyter nbconvert --to notebook --execute \
               --ExecutePreprocessor.timeout=300 \
               --output-dir=/tmp/bhjet-tutorial-executed \
-              tutorials/00_welcome.ipynb \
-              tutorials/01_bhjet_gammapy.ipynb \
-              tutorials/02_interactive_explorer.ipynb'
+              tutorials/welcome.ipynb \
+              tutorials/1_pilot_explorer.ipynb \
+              tutorials/2_source_SED_analysis.ipynb'
 
       - name: Log in to GitHub Container Registry
         if: github.ref_type == 'tag'

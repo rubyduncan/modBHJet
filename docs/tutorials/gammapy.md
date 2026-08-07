@@ -15,8 +15,8 @@ flux = model(energy)
 The wrapper converts Gammapy energy inputs to erg, computes a BHJet spectrum,
 and returns differential photon flux with units compatible with Gammapy.
 
-Use the starting notebooks for concrete workflows:
+<!-- Use the starting notebooks for concrete workflows:
 
-- `tutorials/01_bhjet_gammapy.ipynb` for the Binder-safe guided exercise
-- `examples/gammapy/gammapy_intro.ipynb` for the advanced introduction
-- `examples/gammapy/gammapy_bhjet_comparison.ipynb` for the advanced comparison
+- `tutorials/01_bhjet_gammapy.ipynb` for the explicit tutorial 
+- `examples/gammapy/gammapy_intro.ipynb` for the gammapy + BHJet introduction
+- `examples/gammapy/gammapy_bhjet_comparison.ipynb` is a test case to ensure they are the same. 

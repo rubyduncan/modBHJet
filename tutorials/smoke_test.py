@@ -9,7 +9,7 @@ from bhjet import BHJet, BLJet
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-DATA_FILE = REPOSITORY_ROOT / "examples" / "gammapy" / "data" / "ngc4261" / "ngc4261_dnde.csv"
+DATA_FILE = REPOSITORY_ROOT / "tutorials" / "tutorial_data" / "ngc4261" / "ngc4261_dnde.csv"
 
 if not DATA_FILE.is_file():
     raise FileNotFoundError(f"Bundled tutorial data is missing: {DATA_FILE}")
