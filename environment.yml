@@ -1,0 +1,24 @@
+name: bhjet
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - setuptools
+  - compilers
+  - cmake
+  - make
+  - gsl
+  - llvm-openmp
+  - nanobind
+  - scikit-build-core
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - astropy
+  - gammapy
+  - jupyterlab
+  - ipykernel
+  - ipywidgets
+  - ipympl

@@ -1,61 +1,55 @@
-This is the restructured BHJet version
 
-## Try the tutorial online
+## Link to the online notebook: 
 
 [![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/00_welcome.ipynb)
 
-The public tutorial opens a guided BHJet/Gammapy notebook, an interactive
-explorer, and the bundled NGC 4261 data without requiring a local installation.
-This development link follows the `bhjet_tutorial` branch. Once it has passed
-its checks, replace the branch name in the badge with an immutable release tag
-such as `tutorial-v0.1.0`, then use that tagged link for a school or publication.
-
-MyBinder sessions are temporary and public. For a school or other scheduled
-event, use the same release image in a managed JupyterHub; see
-[`docs/deployment/tutorial-hosting.md`](docs/deployment/tutorial-hosting.md).
-
-## To-do's
-- [X] cut-off in kariba + here (Ruby?) 
-- [X] single zone particle cutoff shape test/proof 
-- [ ] shock: temperature jump (Ruby?)
-- [ ] f_pl scaling (Ruby?)
-- [ ] photon time scale example plot (e.g. particle cooling plot) with sa break
-- [X] move DEFAULTs all to one file (default_values.hpp)
-- [ ] disk + AGN target fields (Ruby?)
-- [ ] adding agnjet jet dynamics (Ruby?)
-- [ ] double check Compton switch (Marc/Ruby?)
-- [ ] hadronic interactions (Ruby/Dimitris)
-- [ ] integrate MLjet (Dimitris?)
-- [X] switch to nanobind + litgen (= remove the pybind file)
+The public tutorial includes an overview of what BHJet calculates with an interactive
+notebook to change parameters, and a test of fitting a BHJet spectral energy distribution to M87 data. Binder sessions are temporary and public, anything that you produce and want to save needs to be downloaded. 
 
 ## Installation
-We suggest to use a micromamba environment (which works similar to conda/miniconda/mamba - just exchange micromamba with e.g. conda in the commands).
-make a new environment like:
 
-```shell
-micromamba create -n bhjet_env python compilers cmake gsl pybind11 pandas numpy scipy matplotlib jupyterlab ipywidgets ipympl
+If you'd like to install the code locally on your computer instead of using Binder: BHJet has a compiled C++ extension and uses the Kariba radiation library (this is a separate code that works in tandem with BHJet and holds the radiation defintions). The [`environment.yml`](environment.yml) will take care of package dependencies. 
+
+### 1. Clone BHJet and Kariba
+
+The default build expects Kariba next to the BHJet directory. The commands below
+reproduce the current Binder tutorial locally (from the branch bhjet_tutorial), including this environment file and the tutorial notebooks.
+
+```bash
+git clone --branch bhjet_tutorial https://github.com/rubyduncan/modBHJet.git
+cd modBHJet
+git clone https://github.com/rubyduncan/kariba.git ../kariba
+git -C ../kariba checkout 6ca6968adf8568e99b2010212fd1419a79d94d35
 ```
 
-activate the environment
+The final command pins Kariba to the version used by the Binder tutorial, so
+the local and public environments use the same radiation backend.
 
-```shell
-micromamba activate bhjet_env
+### 2. Create the environment
+
+Using conda or micromamba, create the environment: 
+
+```bash
+conda env create -f environment.yml
+conda activate bhjet
 ```
 
-and install inside the environment with pip:
+### 3. Build and verify BHJet
 
-```shell
-pip install git+https://github.com/antonpannekoek/BHJet.git@modularUpdate
+```bash
+python -m pip install --no-build-isolation -v .
+python tutorials/smoke_test.py
 ```
-In order to modify the code, it is also possible to clone the repository to a location, and in that folder compile/install it using:
-```shell
-git clone https://github.com/antonpannekoek/BHJet.git bhjet
-cd bhjet
-git switch modularUpdate
-pip install .
+
+The smoke test imports the compiled extension, loads the bundled example data,
+and calculates a small spectrum. Start JupyterLab with:
+
+```bash
+jupyter lab
 ```
-In order to reinstall, just do:
-```shell
-pip install .
-```
-again.
+
+### Kariba in a different directory
+
+If you already have Kariba elsewhere, keep it there and modify the kariba_SOURCE_DIR path in the [CMake file](CMakeLists.txt) so that it can be found when installing BHJet:
+
+To rebuild after changing C++ or Python code, repeat the installation command.

@@ -6,18 +6,26 @@ GSL and the local Kariba backend.
 
 ## Environment
 
-For a micromamba environment:
+The root `environment.yml` provides the complete
+supported local environment, including the C++ compiler toolchain, GSL, OpenMP,
+Nanobind, and optional notebook/Gammapy dependencies:
 
 ```bash
-micromamba create -n bhjet_env python=3.12 compilers cmake make gsl nanobind litgen \
-  pandas numpy scipy matplotlib jupyterlab ipywidgets ipympl
-micromamba activate bhjet_env
+micromamba env create -f environment.yml
+micromamba activate bhjet
 ```
 
-For notebook and tutorial work, also install:
+`conda env create -f environment.yml` and `mamba env create -f environment.yml`
+are equivalent alternatives.
+
+## Kariba backend
+
+Clone the Kariba source beside the modBHJet checkout and pin it to the tutorial
+revision:
 
 ```bash
-python -m pip install -r docs/requirements.txt
+git clone https://github.com/rubyduncan/kariba.git ../kariba
+git -C ../kariba checkout 6ca6968adf8568e99b2010212fd1419a79d94d35
 ```
 
 ## Install from a local checkout
@@ -25,11 +33,13 @@ python -m pip install -r docs/requirements.txt
 From the `modBHJet` directory:
 
 ```bash
-python -m pip install .
+python -m pip install --no-build-isolation -v .
 ```
 
 This invokes `scikit-build-core`, configures CMake, compiles the C++ extension,
-and installs the Python package into the active environment.
+and installs the Python package into the active environment. If Kariba lives
+elsewhere, pass `CMAKE_ARGS="-Dkariba_SOURCE_DIR=/absolute/path/to/kariba"` to
+the install command.
 
 ## Verify the install
 
