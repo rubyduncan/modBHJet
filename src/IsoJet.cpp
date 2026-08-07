@@ -1,4 +1,6 @@
 #include "IsoJet.hpp"
+
+#include <array>
 #include <iostream>
 #include "kariba/Thermal.hpp"
 #include "kariba/constants.hpp"
