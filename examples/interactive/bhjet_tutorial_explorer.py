@@ -91,12 +91,13 @@ PARAMETER_LABELS = {
     "dlgz": "Grid spacing",
 }
 
+# Parameter names in this set are given a bold label in the widget panel.
+EMPHASISED_PARAMETERS = frozenset() #{"lg_10_jet_power_eddington"}
 
 PARAMETER_LIMITS = {
     "lg_10_jet_power_eddington": (-9.0, -1.0, 0.05),
     "theta_obs": (1, 89, 2),
     "index_injected_electrons": (1.2, 5, 0.2),
-    
 }
 
 # The optional 3ML plugin still calls logarithmic parameters "lg_...". Map
