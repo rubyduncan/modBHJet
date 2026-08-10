@@ -4,12 +4,11 @@
 [![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rubyduncan/modBHJet/bhjet_tutorial?urlpath=lab/tree/tutorials/welcome.ipynb)
 
 The public tutorial includes an overview of what BHJet calculates with an interactive
-notebook to change parameters, and a BHJet-only exercise that compares one-zone and multi-zone models with the bundled NGC 4261 spectral energy distribution. Binder sessions are temporary and public, anything that you produce and want to save needs to be downloaded.
+notebook to change parameters, and a BHJet-only exercise that compares one-zone and multi-zone models with included datapoints. Binder sessions are temporary and public, anything that you produce and want to save needs to be downloaded.
 
 ## Installation
 
-If you'd like to install the code locally on your computer instead of using Binder: BHJet has a compiled C++ extension and uses the Kariba radiation library (this is a separate code that works in tandem with BHJet and holds the radiation defintions). The [`environment.yml`](environment.yml) will take care of package dependencies. 
-
+If you'd like to install the code locally on your computer instead of using Binder: BHJet has a compiled C++ extension and uses the Kariba radiation library (this is a separate code that works in tandem with BHJet and holds the radiation defintions). 
 ### 1. Clone BHJet and Kariba
 
 The default build expects Kariba next to the BHJet directory. The commands below
@@ -27,7 +26,7 @@ the local and public environments use the same radiation backend.
 
 ### 2. Create the environment
 
-Using conda or micromamba, create the environment: 
+We have provided a file that can be used to install the required package dependencies: [`environment.yml`](environment.yml). Using conda or micromamba, create the environment: 
 
 ```bash
 conda env create -f environment.yml
@@ -41,14 +40,14 @@ python -m pip install --no-build-isolation -v .
 python tutorials/smoke_test.py
 ```
 
-The smoke test imports the compiled extension, loads the bundled example data,
+This test imports the compiled extension, loads example data,
 and calculates a small spectrum. Start JupyterLab with:
 
 ```bash
 jupyter lab
 ```
 
-### Kariba in a different directory
+### If you have Kariba in a different directory
 
 If you already have Kariba elsewhere, keep it there and modify the kariba_SOURCE_DIR path in the [CMake file](CMakeLists.txt) so that it can be found when installing BHJet:
 
