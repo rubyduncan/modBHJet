@@ -39,6 +39,17 @@ c_cm_s  = 3e10
 
 _MOM_GRID = np.logspace(-8, 8, 200) / c_cm_s   # g cm/s
 
+# Representative photon energies for the broad observing bands shown above the
+# tutorial SED. They are guide labels, rather than sharp band boundaries.
+OBSERVING_BANDS_EV = {
+    "radio": 1e-5,
+    "sub-mm": 1e-3,
+    "infrared": 1e-1,
+    "optical/UV": 20.0,
+    "X-ray": 1e4,
+    "gamma-ray": 1e8,
+}
+
 # ── tutorial interface customisation ─────────────────────────────────────────
 
 # Leave VISIBLE_PARAMETERS as None to show every parameter. To show only a
@@ -46,8 +57,9 @@ _MOM_GRID = np.logspace(-8, 8, 200) / c_cm_s   # g cm/s
 # PARAMETER_LABELS, for example: {"lg_10_jet_power_eddington", "lg_10_z_dissipation"}.
 VISIBLE_PARAMETERS = {
     "lg_10_mass_bh", "lg_10_jet_power_eddington", "lg_10_r_initial",
-    "lg_10_z_end_of_acceleration", "lg_10_z_dissipation", "lg_10_z_max_calculation",
-    "lg_10_sigma_final", "lg_10_gamma_final", "lg_10_electron_temperature_jet_base",
+    "lg_10_z_end_of_acceleration", "link_particle_to_bulk_acceleration",
+    "lg_10_z_dissipation", "lg_10_z_max_calculation",
+    "lg_10_sigma_final", "gamma_final", "lg_10_electron_temperature_jet_base",
     "lg_10_fraction_nonthermal_electrons", "lg_10_factor_break_electrons",
     "lg_10_factor_max_energy_electrons", "index_injected_electrons", "theta_obs",
     "lg_10_distance", 
@@ -65,10 +77,11 @@ PARAMETER_LABELS = {
     "lg_10_z_jet_launching": "log10 jet launching height [rg]",
     "lg_10_r_initial": "log10 jet base initial radius [rg]",
     "lg_10_z_end_of_acceleration": "log10 dist (z) end of bulk acceleration [rg]",
+    "link_particle_to_bulk_acceleration": "z_dissipation = z_acceleration",
     "lg_10_z_dissipation": "log10 dist (z) particle dissipation [rg]",
     "lg_10_z_max_calculation": "log10 dist (z) max calculation [rg]",
     "lg_10_sigma_final": "log10 final magnetisation (sigma_final)",
-    "lg_10_gamma_final": "log10 bulk Lorentz factor of jet",
+    "gamma_final": "Bulk Lorentz factor of jet",
     "plasma_beta_jet_base": "Plasma beta at jet base",
     "lg_10_electron_temperature_jet_base": "log10 electron temp. at jet base [keV]",
     "gamma_acceleration_exponent": "Acceleration exponent",
@@ -91,6 +104,23 @@ PARAMETER_LABELS = {
     "dlgz": "Grid spacing",
 }
 
+# Units displayed alongside the linear-value readout of each log10 slider.
+# Parameters absent from this mapping are dimensionless.
+PARAMETER_VALUE_UNITS = {
+    "lg_10_mass_bh": " M_sun",
+    "lg_10_jet_power_eddington": " L_Edd",
+    "lg_10_distance": " kpc",
+    "lg_10_z_jet_launching": " r_g",
+    "lg_10_r_initial": " r_g",
+    "lg_10_z_end_of_acceleration": " r_g",
+    "lg_10_z_dissipation": " r_g",
+    "lg_10_z_max_calculation": " r_g",
+    "lg_10_electron_temperature_jet_base": " keV",
+    "lg_10_bb_temperature": " keV",
+    "lg_10_bb_energy_density": " erg cm^-3",
+    "lg_10_bb_luminosity": " erg s^-1",
+}
+
 # Parameter names in this set are given a bold label in the widget panel.
 EMPHASISED_PARAMETERS = frozenset() #{"lg_10_jet_power_eddington"}
 
@@ -106,7 +136,7 @@ _UI_PLUGIN_PARAMETER_NAMES = {
     "lg_10_mass_bh", "lg_10_jet_power_eddington",
     "lg_10_z_jet_launching", "lg_10_r_initial",
     "lg_10_z_end_of_acceleration", "lg_10_z_dissipation", "lg_10_z_max_calculation",
-    "lg_10_sigma_final", "lg_10_gamma_final", "plasma_beta_jet_base",
+    "lg_10_sigma_final", "plasma_beta_jet_base",
     "lg_10_electron_temperature_jet_base", "gamma_acceleration_exponent",
     "lg_10_opening_angle_constant",
     "lg_10_fraction_nonthermal_electrons", "lg_10_fraction_nonthermal_protons",
@@ -154,9 +184,10 @@ class BHJetExplorer:
             lg_10_r_initial                    = 0.7,
             lg_10_z_end_of_acceleration        = 5.3,
             lg_10_z_dissipation                = 2.0,
+            link_particle_to_bulk_acceleration = False,
             lg_10_z_max_calculation            = 5.5,
             lg_10_sigma_final                  = 0.0,
-            lg_10_gamma_final                  = 1.0,
+            gamma_final                        = 10.0,
             plasma_beta_jet_base               = 0.02,
             calc_pair_content_from_plasma_beta = False,
             lg_10_electron_temperature_jet_base = 3.5,
@@ -215,7 +246,7 @@ class BHJetExplorer:
             z_dissipation                      = 10**d["lg_10_z_dissipation"],
             z_max_calculation                  = 10**d["lg_10_z_max_calculation"],
             sigma_final                        = 10**d["lg_10_sigma_final"],
-            gamma_final                        = 10**d["lg_10_gamma_final"],
+            gamma_final                        = d["gamma_final"],
             plasma_beta_jet_base               = d["plasma_beta_jet_base"],
             calc_pair_content_from_plasma_beta = d["calc_pair_content_from_plasma_beta"],
             electron_temperature_jet_base      = 10**d["lg_10_electron_temperature_jet_base"],
@@ -259,6 +290,8 @@ class BHJetExplorer:
         for ui_name, plugin_name in _PLUGIN_PARAMETER_NAMES.items():
             if plugin_name in self._plugin.parameters:
                 self._plugin.parameters[plugin_name].value = d[ui_name]
+        if "lg_gamma_final" in self._plugin.parameters:
+            self._plugin.parameters["lg_gamma_final"].value = np.log10(d["gamma_final"])
         self._bb_plugin_target = None
         self._bb_added         = False
         self._plugin(self.E_keV)
@@ -301,10 +334,29 @@ class BHJetExplorer:
 
         self.ax.set_xlabel("Observed energy [eV]", fontsize=12)
         self.ax.set_ylabel(r"$\nu F_\nu$  [erg cm$^{-2}$ s$^{-1}$]", fontsize=12)
+        self.ax.set_xscale("log")
+        self.ax.set_yscale("log")
         self.ax.set_xlim(self.E_eV[0], self.E_eV[-1])
         self.ax.set_ylim(1e-20, 1e-8)
         self.ax.set_aspect("equal")
         self.ax.grid(alpha=0.3)
+
+        # A widget-backed Matplotlib canvas cannot reliably render an added
+        # secondary axis. These fixed labels therefore form a visual top-axis
+        # guide, while keeping the SED itself as one interactive canvas.
+        self._band_labels = []
+        for label, energy_eV in OBSERVING_BANDS_EV.items():
+            text = self.ax.text(
+                energy_eV,
+                1.02,
+                label,
+                transform=self.ax.get_xaxis_transform(),
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                clip_on=False,
+            )
+            self._band_labels.append(text)
 
         self.cax.set_ylabel(r"$\log_{10}\,z/r_g$")
         self.cax.set_xlabel(r"$\log_{10}\,r/r_g$")
@@ -585,6 +637,10 @@ class BHJetExplorer:
         def display_label(desc):
             return PARAMETER_LABELS.get(desc, desc)
 
+        def linear_value_label(desc, log_value):
+            """Format a log10 slider's physical value and, where relevant, its unit."""
+            return f"= {10**log_value:.2e}{PARAMETER_VALUE_UNITS.get(desc, '')}"
+
         def bold_label(desc):
             return widgets.HTML(
                 value=f"<b>{escape(display_label(desc))}</b>",
@@ -613,9 +669,11 @@ class BHJetExplorer:
                 description=display_label(desc), readout_format=fmt,
                 style={"description_width": "250px"},
                 layout=widgets.Layout(width="480px"))
-            lbl = widgets.Label(value=f"= {10**val:.2e}",
-                                layout=widgets.Layout(width="100px"))
-            s.observe(lambda c, l=lbl: l.__setattr__("value", f"= {10**c['new']:.2e}"),
+            lbl = widgets.Label(value=linear_value_label(desc, val),
+                                layout=widgets.Layout(width="155px"))
+            s.observe(lambda c, l=lbl, d=desc: l.__setattr__(
+                "value", linear_value_label(d, c["new"])
+            ),
                     names="value")
             _all_widgets.append((desc, s))
             return widget_row(desc, s, lbl)
@@ -663,13 +721,14 @@ class BHJetExplorer:
                 fls("lg_10_z_jet_launching",             d["lg_10_z_jet_launching"],     0,   5),
                 fls("lg_10_r_initial",                   d["lg_10_r_initial"],           0,   5),
                 fls("lg_10_z_end_of_acceleration",       d["lg_10_z_end_of_acceleration"], 0, 10),
+                cb( "link_particle_to_bulk_acceleration", d["link_particle_to_bulk_acceleration"]),
                 fls("lg_10_z_dissipation",               d["lg_10_z_dissipation"],       0,  10),
-                fls("lg_10_z_max_calculation",           d["lg_10_z_max_calculation"],   0,  10),
                 fls("lg_10_sigma_final",                 d["lg_10_sigma_final"],        -5,   5),
-                fls("lg_10_gamma_final",                 d["lg_10_gamma_final"],      0.001,  5),
+                fs( "gamma_final",                       d["gamma_final"],             1, 100, step=1, fmt=".0f"),
                 cb( "calc_pair_content_from_plasma_beta",d["calc_pair_content_from_plasma_beta"]),
                 fs( "plasma_beta_jet_base",              d["plasma_beta_jet_base"],      0.01, 1000, step=0.01, fmt=".2f"),
                 fls("lg_10_electron_temperature_jet_base", d["lg_10_electron_temperature_jet_base"], 0, 10),
+                fls("lg_10_z_max_calculation",           d["lg_10_z_max_calculation"],   0,  10),
                 fs( "gamma_acceleration_exponent",       d["gamma_acceleration_exponent"], 0, 10, step=0.05),
                 fls("lg_10_opening_angle_constant",      d["lg_10_opening_angle_constant"], -5, 5),
             ],
@@ -746,6 +805,20 @@ class BHJetExplorer:
         p = self._defaults.copy()
         p.update({k: w.value for k, w in self._flat_widgets.items()})
 
+        # The two distances are displayed as log10(z / r_g), so copying the
+        # slider value makes the physical particle- and bulk-acceleration
+        # distances identical. Disable the particle-acceleration slider while
+        # linked so that the UI makes the relationship unambiguous.
+        particle_slider = self._flat_widgets.get("lg_10_z_dissipation")
+        if p["link_particle_to_bulk_acceleration"]:
+            p["lg_10_z_dissipation"] = p["lg_10_z_end_of_acceleration"]
+            if particle_slider is not None:
+                particle_slider.disabled = True
+                if particle_slider.value != p["lg_10_z_dissipation"]:
+                    particle_slider.value = p["lg_10_z_dissipation"]
+        elif particle_slider is not None:
+            particle_slider.disabled = False
+
         if self._meta_params_changed(p):
             for k in p:
                 if k in self._defaults:
@@ -778,7 +851,7 @@ class BHJetExplorer:
         bl.z_dissipation                      = 10**p["lg_10_z_dissipation"]
         bl.z_max_calculation                  = 10**p["lg_10_z_max_calculation"]
         bl.sigma_final                        = 10**p["lg_10_sigma_final"]
-        bl.gamma_final                        = 10**p["lg_10_gamma_final"]
+        bl.gamma_final                        = p["gamma_final"]
         bl.plasma_beta_jet_base               = p["plasma_beta_jet_base"]
         bl.calc_pair_content_from_plasma_beta = p["calc_pair_content_from_plasma_beta"]
         bl.electron_temperature_jet_base      = 10**p["lg_10_electron_temperature_jet_base"]
@@ -825,6 +898,8 @@ class BHJetExplorer:
         for ui_name, plugin_name in _PLUGIN_PARAMETER_NAMES.items():
             if plugin_name in self._plugin.parameters:
                 self._plugin.parameters[plugin_name].value = p[ui_name]
+        if "lg_gamma_final" in self._plugin.parameters:
+            self._plugin.parameters["lg_gamma_final"].value = np.log10(p["gamma_final"])
 
         if p["bb_enable"]:
             if self._bb_plugin_target is None:

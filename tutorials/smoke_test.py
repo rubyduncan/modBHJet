@@ -1,10 +1,6 @@
-"""Minimal post-build check for the public BHJet tutorial environment."""
-
 from pathlib import Path
-
 import numpy as np
 from astropy.table import Table
-
 from bhjet import BHJet, BLJet
 
 
@@ -28,5 +24,3 @@ flux = np.asarray(jet.get_observed_photon_flux_total(), dtype=float)
 
 if flux.shape != energy_eV.shape or not np.isfinite(flux).all():
     raise RuntimeError("BHJet did not return a finite spectrum on the tutorial grid.")
-
-print(f"BHJet tutorial smoke test passed with {len(table)} bundled data points.")
