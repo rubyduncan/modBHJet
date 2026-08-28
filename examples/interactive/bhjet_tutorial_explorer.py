@@ -22,7 +22,7 @@ import ipywidgets as widgets
 from ipywidgets import VBox, HBox, Tab
 from IPython.display import display
 
-from bhjet import BLJet, BHJet, TargetBlackBody
+from bhjet import BLJet, BHJet, RadiationZone, TargetBlackBody
 
 # ── optional 3ML import ───────────────────────────────────────────────────────
 try:
@@ -36,19 +36,42 @@ except ImportError:
 erg2eV  = 6.242e+11
 eV2erg  = 1.0 / erg2eV
 c_cm_s  = 3e10
+h_eV_s  = 4.135667696e-15
 
 _MOM_GRID = np.logspace(-8, 8, 200) / c_cm_s   # g cm/s
 
-# Representative photon energies for the broad observing bands shown above the
+# Representative frequencies for the broad observing bands shown above the
 # tutorial SED. They are guide labels, rather than sharp band boundaries.
-OBSERVING_BANDS_EV = {
-    "radio": 1e-5,
-    "sub-mm": 1e-3,
-    "infrared": 1e-1,
-    "optical/UV": 20.0,
-    "X-ray": 1e4,
-    "gamma-ray": 1e8,
+OBSERVING_BANDS_HZ = {
+    "radio": 2.4e9,
+    "sub-mm": 2.4e11,
+    "infrared": 2.4e13,
+    "optical/UV": 4.8e15,
+    "X-ray": 2.4e18,
+    "gamma-ray": 2.4e22,
 }
+
+
+def energy_eV_to_frequency_hz(energy_eV):
+    """Convert photon energy in eV to frequency in Hz."""
+    return np.asarray(energy_eV) / h_eV_s
+
+
+def add_observing_band_labels(axis):
+    """Add the fixed broad-band guide labels used by the tutorial SED plots."""
+    return [
+        axis.text(
+            frequency_hz,
+            1.02,
+            label,
+            transform=axis.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            clip_on=False,
+        )
+        for label, frequency_hz in OBSERVING_BANDS_HZ.items()
+    ]
 
 # ── tutorial interface customisation ─────────────────────────────────────────
 
@@ -150,6 +173,234 @@ _PLUGIN_PARAMETER_NAMES = {
 }
 
 
+class OneZoneFittingExplorer:
+    """Interactive single-emission-region SED fitter for a tutorial notebook."""
+
+    def __init__(
+        self,
+        distance,
+        redshift,
+        theta_obs,
+        Emin_eV=1e-9,
+        Emax_eV=1e13,
+        n_energy=220,
+        defaults=None,
+        observation_energy_eV=None,
+        observation_sed=None,
+        observation_sed_error=None,
+        observation_label="observations",
+    ):
+        self.distance = distance
+        self.redshift = redshift
+        self.theta_obs = theta_obs
+        self.E_eV = np.logspace(np.log10(Emin_eV), np.log10(Emax_eV), n_energy)
+        self._defaults = {
+            "magnetic_field": 0.2,
+            "radius": 1e16,
+            "height": 1e16,
+            "geometry": "sphere",
+            "bulk_momentum": 2.0,
+            "electron_number_density": 1e3,
+            "electron_temperature": 900.0,
+            "fraction_nonthermal_electrons": 0.1,
+            "factor_break_electrons": 0.1,
+            "factor_max_energy_electrons": 1e-7,
+            "index_injected_electrons": 1.8,
+        }
+        if defaults is not None:
+            self._defaults.update(defaults)
+        self._starting_defaults = self._defaults.copy()
+        self._resetting = False
+
+        self._observation_energy_eV = None
+        self._observation_sed = None
+        self._observation_sed_error = None
+        self._observation_label = observation_label
+        if observation_energy_eV is not None and observation_sed is not None:
+            self._observation_energy_eV = np.asarray(observation_energy_eV, dtype=float)
+            self._observation_sed = np.asarray(observation_sed, dtype=float)
+            self._observation_sed_error = (
+                None if observation_sed_error is None
+                else np.asarray(observation_sed_error, dtype=float)
+            )
+
+        self._build_figure()
+        self._build_widgets()
+        self.calculate()
+
+    def _build_figure(self):
+        plt.ioff()
+        self.fig, self.ax = plt.subplots(figsize=(10, 5))
+        self.ax.set(
+            xscale="log", yscale="log",
+            xlim=(energy_eV_to_frequency_hz(self.E_eV[0]),
+                  energy_eV_to_frequency_hz(self.E_eV[-1])),
+            ylim=(1e-18, 1e-10),
+            xlabel="Observed frequency [Hz]",
+            ylabel=r"$\nu F_\nu$ [erg cm$^{-2}$ s$^{-1}$]",
+        )
+        self.ax.grid(alpha=0.3)
+        self._band_labels = add_observing_band_labels(self.ax)
+        if self._observation_energy_eV is not None:
+            self.ax.errorbar(
+                energy_eV_to_frequency_hz(self._observation_energy_eV), self._observation_sed,
+                yerr=self._observation_sed_error,
+                fmt="o", ms=4, color="black", label=self._observation_label,
+            )
+        self._model_line, = self.ax.loglog([np.nan], [np.nan], c="k", lw=2,
+                                            label="one-zone total")
+        self._synchrotron_line, = self.ax.loglog([np.nan], [np.nan], c="tab:blue",
+                                                   ls="--", lw=1.5, label="synchrotron")
+        self._ssc_line, = self.ax.loglog([np.nan], [np.nan], c="tab:red",
+                                          ls="--", lw=1.5, label="SSC")
+        self.ax.legend()
+        plt.ion()
+
+    def _build_widgets(self):
+        d = self._defaults
+
+        def log_slider(description, value, lower, upper):
+            return widgets.FloatLogSlider(
+                value=value, base=10, min=lower, max=upper, step=0.05,
+                description=description, continuous_update=False,
+                style={"description_width": "250px"},
+                layout=widgets.Layout(width="540px"),
+            )
+
+        def linear_slider(description, value, lower, upper, step):
+            return widgets.FloatSlider(
+                value=value, min=lower, max=upper, step=step,
+                description=description, continuous_update=False,
+                style={"description_width": "250px"},
+                layout=widgets.Layout(width="540px"),
+            )
+
+        self._widgets = {
+            "geometry": widgets.Dropdown(
+                options=["sphere", "cylinder"], value=d["geometry"],
+                description="Geometry", style={"description_width": "250px"},
+                layout=widgets.Layout(width="540px"),
+            ),
+            "magnetic_field": log_slider("Magnetic field [G, log scale]", d["magnetic_field"], -3, 2),
+            "radius": log_slider("Radius [cm, log scale]", d["radius"], 12, 20),
+            "height": log_slider("Height [cm, log scale]", d["height"], 12, 20),
+            "bulk_momentum": linear_slider("Bulk momentum", d["bulk_momentum"], 1, 20, 0.1),
+            "electron_number_density": log_slider("Electron density [cm$^{-3}$, log scale]", d["electron_number_density"], 0, 6),
+            "electron_temperature": log_slider("Electron temperature [keV, log scale]", d["electron_temperature"], 1, 4),
+            "fraction_nonthermal_electrons": log_slider("Non-thermal electron fraction [log scale]", d["fraction_nonthermal_electrons"], -2, 0),
+            "factor_break_electrons": log_slider("Electron break factor [log scale]", d["factor_break_electrons"], -2, 0),
+            "factor_max_energy_electrons": log_slider("Maximum-energy factor [log scale]", d["factor_max_energy_electrons"], -9, 0),
+            "index_injected_electrons": linear_slider("Injected electron index", d["index_injected_electrons"], 1.5, 3.5, 0.05),
+        }
+        for widget in self._widgets.values():
+            widget.observe(self._on_widget_change, names="value")
+
+        emission_region = VBox([
+            self._widgets["geometry"], self._widgets["magnetic_field"],
+            self._widgets["radius"], self._widgets["height"],
+            self._widgets["bulk_momentum"],
+        ])
+        electrons = VBox([
+            self._widgets["electron_number_density"],
+            self._widgets["electron_temperature"],
+            self._widgets["fraction_nonthermal_electrons"],
+            self._widgets["factor_break_electrons"],
+            self._widgets["factor_max_energy_electrons"],
+            self._widgets["index_injected_electrons"],
+        ])
+        self._tab = Tab(children=[emission_region, electrons])
+        self._tab.set_title(0, "Emission region")
+        self._tab.set_title(1, "Electrons")
+
+        self._reset_button = widgets.Button(description="Reset to starting model")
+        self._status = widgets.Label(value="Model updates when you release a control.")
+        self._reset_button.on_click(lambda _: self.reset())
+        self._controls = HBox([self._reset_button, self._status])
+
+    def _parameters(self):
+        return {name: widget.value for name, widget in self._widgets.items()}
+
+    def _on_widget_change(self, change=None):
+        if not self._resetting:
+            self.calculate()
+
+    def calculate(self):
+        """Calculate and redraw the one-zone model."""
+        zone = RadiationZone(
+            distance=self.distance, redshift=self.redshift, theta_obs=self.theta_obs,
+            include_counterjet=True, compton_threshold=1e-5, **self._parameters(),
+        )
+        zone.compute_particles()
+        zone.compute_radiation((self.E_eV * eV2erg).tolist())
+        self._zone = zone
+
+        energy_erg = np.asarray(zone.get_observed_photon_energy_grid_total(), dtype=float)
+        self._energy_eV = energy_erg * erg2eV
+        self._sed = energy_erg * np.asarray(zone.get_observed_photon_flux_total(), dtype=float)
+
+        synchrotron_energy_erg = np.asarray(
+            zone.get_observed_photon_energy_grid_electron_cyclosyn(), dtype=float
+        )
+        self._synchrotron_energy_eV = synchrotron_energy_erg * erg2eV
+        self._synchrotron_sed = synchrotron_energy_erg * np.asarray(
+            zone.get_observed_photon_flux_electron_cyclosyn(), dtype=float
+        )
+
+        ssc_energy_erg = np.asarray(
+            zone.get_observed_photon_energy_grid_electron_compton(), dtype=float
+        )
+        self._ssc_energy_eV = ssc_energy_erg * erg2eV
+        self._ssc_sed = ssc_energy_erg * np.asarray(
+            zone.get_observed_photon_flux_electron_compton(), dtype=float
+        )
+
+        self._model_line.set_data(energy_eV_to_frequency_hz(self._energy_eV), self._sed)
+        self._synchrotron_line.set_data(
+            energy_eV_to_frequency_hz(self._synchrotron_energy_eV), self._synchrotron_sed
+        )
+        self._ssc_line.set_data(energy_eV_to_frequency_hz(self._ssc_energy_eV), self._ssc_sed)
+        self.fig.canvas.draw_idle()
+        self._status.value = "Model updated."
+
+    def reset(self):
+        """Restore the tutorial starting values."""
+        self._resetting = True
+        for name, widget in self._widgets.items():
+            widget.value = self._starting_defaults[name]
+        self._resetting = False
+        self.calculate()
+
+    def get_total_sed(self):
+        """Return the current model as energy [eV] and nu F_nu [cgs]."""
+        return self._energy_eV, self._sed
+
+    def get_component_seds(self):
+        """Return the current synchrotron and SSC spectra in tutorial units."""
+        return {
+            "synchrotron": (self._synchrotron_energy_eV, self._synchrotron_sed),
+            "ssc": (self._ssc_energy_eV, self._ssc_sed),
+        }
+
+    def get_parameters(self):
+        """Return the current values selected in the widgets."""
+        return self._parameters().copy()
+
+    def set_parameters(self, parameters):
+        """Apply saved parameters to the widgets and recalculate the model."""
+        self._resetting = True
+        try:
+            for name, value in parameters.items():
+                if name in self._widgets:
+                    self._widgets[name].value = value
+        finally:
+            self._resetting = False
+        self.calculate()
+
+    def display(self):
+        """Render the plot first, with tabbed controls directly below it."""
+        display(VBox([self.fig.canvas, self._controls, self._tab]))
+
+
 class BHJetExplorer:
     """
     Interactive BHJet SED explorer (pure classes + optional 3ML mode).
@@ -167,8 +418,28 @@ class BHJetExplorer:
         Emin_eV=1e-6,
         Emax_eV=1e12,
         n_energy=300,
+        defaults=None,
+        observation_energy_eV=None,
+        observation_sed=None,
+        observation_sed_error=None,
+        observation_label="observations",
+        manual_update=False,
     ):
         self._verbosity = verbosity_level
+        self._manual_update = manual_update
+        self._loading_parameters = False
+        self._observation_energy_eV = None
+        self._observation_sed = None
+        self._observation_sed_error = None
+        self._observation_label = observation_label
+
+        if observation_energy_eV is not None and observation_sed is not None:
+            self._observation_energy_eV = np.asarray(observation_energy_eV, dtype=float)
+            self._observation_sed = np.asarray(observation_sed, dtype=float)
+            self._observation_sed_error = (
+                None if observation_sed_error is None
+                else np.asarray(observation_sed_error, dtype=float)
+            )
 
         self.E_eV  = np.logspace(np.log10(Emin_eV), np.log10(Emax_eV), n_energy)
         self.E_erg = self.E_eV * eV2erg
@@ -182,12 +453,12 @@ class BHJetExplorer:
             lg_10_jet_power_eddington          = -5.0,
             lg_10_z_jet_launching              = 0.3,
             lg_10_r_initial                    = 0.7,
-            lg_10_z_end_of_acceleration        = 5.3,
-            lg_10_z_dissipation                = 2.0,
-            link_particle_to_bulk_acceleration = False,
+            lg_10_z_end_of_acceleration        = 2.5,
+            lg_10_z_dissipation                = 2.5,
+            link_particle_to_bulk_acceleration = True,
             lg_10_z_max_calculation            = 5.5,
             lg_10_sigma_final                  = 0.0,
-            gamma_final                        = 10.0,
+            gamma_final                        = 5.0,
             plasma_beta_jet_base               = 0.02,
             calc_pair_content_from_plasma_beta = False,
             lg_10_electron_temperature_jet_base = 3.5,
@@ -210,6 +481,9 @@ class BHJetExplorer:
             lg_10_compton_threshold            = -5.0,
             dlgz                               = 0.1,
         )
+        if defaults is not None:
+            self._defaults.update(defaults)
+        self._starting_defaults = self._defaults.copy()
 
         self._mode             = "pure"
         self._plugin           = None
@@ -226,7 +500,7 @@ class BHJetExplorer:
         for w in self._flat_widgets.values():
             if hasattr(w, "continuous_update"):
                 w.continuous_update = False
-            w.observe(self._on_change, names="value")
+            w.observe(self._on_widget_change, names="value")
 
     # ── model construction ────────────────────────────────────────────────────
 
@@ -332,11 +606,12 @@ class BHJetExplorer:
         self.ax  = self.fig.add_subplot(gs[0])
         self.cax = self.fig.add_subplot(gs[1])
 
-        self.ax.set_xlabel("Observed energy [eV]", fontsize=12)
+        self.ax.set_xlabel("Observed frequency [Hz]", fontsize=12)
         self.ax.set_ylabel(r"$\nu F_\nu$  [erg cm$^{-2}$ s$^{-1}$]", fontsize=12)
         self.ax.set_xscale("log")
         self.ax.set_yscale("log")
-        self.ax.set_xlim(self.E_eV[0], self.E_eV[-1])
+        self.ax.set_xlim(energy_eV_to_frequency_hz(self.E_eV[0]),
+                         energy_eV_to_frequency_hz(self.E_eV[-1]))
         self.ax.set_ylim(1e-20, 1e-8)
         self.ax.set_aspect("equal")
         self.ax.grid(alpha=0.3)
@@ -344,19 +619,7 @@ class BHJetExplorer:
         # A widget-backed Matplotlib canvas cannot reliably render an added
         # secondary axis. These fixed labels therefore form a visual top-axis
         # guide, while keeping the SED itself as one interactive canvas.
-        self._band_labels = []
-        for label, energy_eV in OBSERVING_BANDS_EV.items():
-            text = self.ax.text(
-                energy_eV,
-                1.02,
-                label,
-                transform=self.ax.get_xaxis_transform(),
-                ha="center",
-                va="bottom",
-                fontsize=9,
-                clip_on=False,
-            )
-            self._band_labels.append(text)
+        self._band_labels = add_observing_band_labels(self.ax)
 
         self.cax.set_ylabel(r"$\log_{10}\,z/r_g$")
         self.cax.set_xlabel(r"$\log_{10}\,r/r_g$")
@@ -365,13 +628,26 @@ class BHJetExplorer:
 
         dummy = np.full_like(self.E_eV, np.nan)
         self._lines = {}
-        self._lines["total"],   = self.ax.loglog(self.E_eV, dummy, c="k",          lw=2,    label="total")
-        self._lines["presyn"],  = self.ax.loglog(self.E_eV, dummy, c="tab:blue",   ls="--", lw=1.5, label="pre-acc. syn.")
-        self._lines["precom"],  = self.ax.loglog(self.E_eV, dummy, c="tab:green",  ls="--", lw=1.5, label="pre-acc. IC")
-        self._lines["postsyn"], = self.ax.loglog(self.E_eV, dummy, c="tab:orange", ls=":",  lw=1.5, label="post-acc. syn.")
-        self._lines["postcom"], = self.ax.loglog(self.E_eV, dummy, c="tab:red",    ls=":",  lw=1.5, label="post-acc. IC")
-        self._lines["bb"],      = self.ax.loglog(self.E_eV, dummy, c="tab:purple", ls="-.", lw=1.5, label="BB target")
+        frequency_hz = energy_eV_to_frequency_hz(self.E_eV)
+        self._lines["total"],   = self.ax.loglog(frequency_hz, dummy, c="k",          lw=2,    label="total")
+        self._lines["presyn"],  = self.ax.loglog(frequency_hz, dummy, c="tab:blue",   ls="--", lw=1.5, label="pre-acc. syn.")
+        self._lines["precom"],  = self.ax.loglog(frequency_hz, dummy, c="tab:green",  ls="--", lw=1.5, label="pre-acc. IC")
+        self._lines["postsyn"], = self.ax.loglog(frequency_hz, dummy, c="tab:orange", ls=":",  lw=1.5, label="post-acc. syn.")
+        self._lines["postcom"], = self.ax.loglog(frequency_hz, dummy, c="tab:red",    ls=":",  lw=1.5, label="post-acc. IC")
+        self._lines["bb"],      = self.ax.loglog(frequency_hz, dummy, c="tab:purple", ls="-.", lw=1.5, label="BB target")
         self._lines["bb"].set_visible(False)
+        if self._observation_energy_eV is not None:
+            self._observation_artist = self.ax.errorbar(
+                energy_eV_to_frequency_hz(self._observation_energy_eV),
+                self._observation_sed,
+                yerr=self._observation_sed_error,
+                fmt="o",
+                ms=4,
+                color="black",
+                label=self._observation_label,
+            )
+        else:
+            self._observation_artist = None
         self.ax.legend(fontsize=10)
 
         self._jet_shape_line, = self.cax.plot([], [], c="k",      lw=1.5, marker="_")
@@ -393,26 +669,26 @@ class BHJetExplorer:
         bb = self._active_bb
 
         E         = np.array(bj.get_observed_photon_energy_grid())
-        E_plot    = E * erg2eV
+        frequency_hz = energy_eV_to_frequency_hz(E * erg2eV)
         z_diss_cm = bl.z_dissipation * bl.r_g
         z_max_cm  = bl.z_max_calculation * bl.r_g
 
         self._lines["total"].set_data(
-            E_plot, E * np.array(bj.get_observed_photon_flux_total()))
+            frequency_hz, E * np.array(bj.get_observed_photon_flux_total()))
         self._lines["presyn"].set_data(
-            E_plot, E * np.array(bj.get_observed_photon_integrated_flux_electron_cyclosyn(0.0, z_diss_cm)))
+            frequency_hz, E * np.array(bj.get_observed_photon_integrated_flux_electron_cyclosyn(0.0, z_diss_cm)))
         self._lines["precom"].set_data(
-            E_plot, E * np.array(bj.get_observed_photon_integrated_flux_electron_compton(0.0, z_diss_cm)))
+            frequency_hz, E * np.array(bj.get_observed_photon_integrated_flux_electron_compton(0.0, z_diss_cm)))
         self._lines["postsyn"].set_data(
-            E_plot, E * np.array(bj.get_observed_photon_integrated_flux_electron_cyclosyn(z_diss_cm, z_max_cm)))
+            frequency_hz, E * np.array(bj.get_observed_photon_integrated_flux_electron_cyclosyn(z_diss_cm, z_max_cm)))
         self._lines["postcom"].set_data(
-            E_plot, E * np.array(bj.get_observed_photon_integrated_flux_electron_compton(z_diss_cm, z_max_cm)))
+            frequency_hz, E * np.array(bj.get_observed_photon_integrated_flux_electron_compton(z_diss_cm, z_max_cm)))
 
         if bb is not None:
             if self._mode == "3ml":
                 bb.update_observed_flux()
             self._lines["bb"].set_data(
-                np.array(bb.get_observed_energy()) * erg2eV,
+                energy_eV_to_frequency_hz(np.array(bb.get_observed_energy()) * erg2eV),
                 np.array(bb.get_observed_energy_flux()))
             self._lines["bb"].set_visible(True)
         else:
@@ -491,7 +767,7 @@ class BHJetExplorer:
         self._ze_vic_syn, = ax.plot([np.nan], [1e-20], ls=":", c="tab:blue",   lw=1)
         self._ze_vic_bb,  = ax.plot([np.nan], [1e-20], ls=":", c="tab:purple", lw=1)
         self._ze_vic_bb.set_visible(False)
-        ax.set_xlabel("Observed energy [eV]")
+        ax.set_xlabel("Observed frequency [Hz]")
         ax.set_ylabel(r"$\nu F_\nu$ [erg cm$^{-2}$ s$^{-1}$]")
         ax.set_title("Observed emission (this zone)")
         ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.legend(fontsize=9)
@@ -574,14 +850,14 @@ class BHJetExplorer:
         # panel 4: observed emission
         E_tot    = np.array(rad.get_observed_photon_energy_grid_total())
         tot_flux = E_tot * np.array(rad.get_observed_photon_flux_total())
-        self._ze_total.set_data(E_tot * erg2eV, tot_flux)
+        self._ze_total.set_data(energy_eV_to_frequency_hz(E_tot * erg2eV), tot_flux)
 
         E_syn = np.array(rad.get_observed_photon_energy_grid_electron_cyclosyn())
-        self._ze_syn.set_data(E_syn * erg2eV,
+        self._ze_syn.set_data(energy_eV_to_frequency_hz(E_syn * erg2eV),
             E_syn * np.array(rad.get_observed_photon_flux_electron_cyclosyn()))
 
         E_com = np.array(rad.get_observed_photon_energy_grid_electron_compton())
-        self._ze_com.set_data(E_com * erg2eV,
+        self._ze_com.set_data(energy_eV_to_frequency_hz(E_com * erg2eV),
             E_com * np.array(rad.get_observed_photon_flux_electron_compton()))
 
         gamma_grid = np.array(rad.get_electron_gamma_grid())
@@ -590,7 +866,9 @@ class BHJetExplorer:
         valid_s = np.isfinite(E_s) & np.isfinite(u_s) & (u_s > 0)
         if valid_s.any():
             E_syn_peak = np.exp(np.average(np.log(E_s[valid_s] * erg2eV), weights=u_s[valid_s]))
-            self._ze_vic_syn.set_xdata([main_lf**2 * 4 * E_syn_peak * rad.doppler_factor_bulk] * 2)
+            self._ze_vic_syn.set_xdata([
+                energy_eV_to_frequency_hz(main_lf**2 * 4 * E_syn_peak * rad.doppler_factor_bulk)
+            ] * 2)
         else:
             self._ze_vic_syn.set_xdata([np.nan, np.nan])
 
@@ -598,9 +876,11 @@ class BHJetExplorer:
             if self._mode == "3ml":
                 bb.update_observed_flux()
             bb_T_eV = bb.temperature * 1e3
-            self._ze_vic_bb.set_xdata([main_lf**2 * 4 * bb_T_eV * rad.doppler_factor_bulk] * 2)
+            self._ze_vic_bb.set_xdata([
+                energy_eV_to_frequency_hz(main_lf**2 * 4 * bb_T_eV * rad.doppler_factor_bulk)
+            ] * 2)
             self._ze_vic_bb.set_visible(True)
-            self._ze_bb.set_data(np.array(bb.get_observed_energy()) * erg2eV,
+            self._ze_bb.set_data(energy_eV_to_frequency_hz(np.array(bb.get_observed_energy()) * erg2eV),
                                  np.array(bb.get_observed_energy_flux()))
             self._ze_bb.set_visible(True)
         else:
@@ -711,31 +991,31 @@ class BHJetExplorer:
 
         param_groups = {
             "Source Parameters": [
-                fls("lg_10_mass_bh",                     d["lg_10_mass_bh"],             0,  15),
-                fls("lg_10_jet_power_eddington",         d["lg_10_jet_power_eddington"], -10,   5),
-                fs( "theta_obs",                         d["theta_obs"],                 0,  90, step=1),
+                fls("lg_10_mass_bh",                     d["lg_10_mass_bh"],             0,  10),
+                fls("lg_10_jet_power_eddington",         d["lg_10_jet_power_eddington"], -10,   2),
+                fs( "theta_obs",                         d["theta_obs"],                 0,  89, step=1),
                 fls("lg_10_distance",                    d["lg_10_distance"],            0,  10),
                 fs( "redshift",                          d["redshift"],                  0,   1, step=0.0001, fmt=".5f"),
             ],
             "Jet Properties": [
                 fls("lg_10_z_jet_launching",             d["lg_10_z_jet_launching"],     0,   5),
-                fls("lg_10_r_initial",                   d["lg_10_r_initial"],           0,   5),
+                fls("lg_10_r_initial",                   d["lg_10_r_initial"],           0,   3),
                 fls("lg_10_z_end_of_acceleration",       d["lg_10_z_end_of_acceleration"], 0, 10),
                 cb( "link_particle_to_bulk_acceleration", d["link_particle_to_bulk_acceleration"]),
                 fls("lg_10_z_dissipation",               d["lg_10_z_dissipation"],       0,  10),
-                fls("lg_10_sigma_final",                 d["lg_10_sigma_final"],        -5,   5),
-                fs( "gamma_final",                       d["gamma_final"],             1, 100, step=1, fmt=".0f"),
+                fls("lg_10_sigma_final",                 d["lg_10_sigma_final"],        -4,   1),
+                fs( "gamma_final",                       d["gamma_final"],             1, 50, step=1, fmt=".0f"),
                 cb( "calc_pair_content_from_plasma_beta",d["calc_pair_content_from_plasma_beta"]),
-                fs( "plasma_beta_jet_base",              d["plasma_beta_jet_base"],      0.01, 1000, step=0.01, fmt=".2f"),
-                fls("lg_10_electron_temperature_jet_base", d["lg_10_electron_temperature_jet_base"], 0, 10),
-                fls("lg_10_z_max_calculation",           d["lg_10_z_max_calculation"],   0,  10),
-                fs( "gamma_acceleration_exponent",       d["gamma_acceleration_exponent"], 0, 10, step=0.05),
+                fs( "plasma_beta_jet_base",              d["plasma_beta_jet_base"],      0.01, 10, step=0.01, fmt=".2f"),
+                fls("lg_10_electron_temperature_jet_base", d["lg_10_electron_temperature_jet_base"], 0, 4),
+                fls("lg_10_z_max_calculation",           d["lg_10_z_max_calculation"],   4,  8),
+                fs( "gamma_acceleration_exponent",       d["gamma_acceleration_exponent"], 1, 10, step=0.05),
                 fls("lg_10_opening_angle_constant",      d["lg_10_opening_angle_constant"], -5, 5),
             ],
             "Electrons": [
-                fls("lg_10_fraction_nonthermal_electrons", d["lg_10_fraction_nonthermal_electrons"], -10, 0),
-                fls("lg_10_factor_break_electrons",      d["lg_10_factor_break_electrons"], -10, 10),
-                fls("lg_10_factor_max_energy_electrons", d["lg_10_factor_max_energy_electrons"], -10, 10),
+                fls("lg_10_fraction_nonthermal_electrons", d["lg_10_fraction_nonthermal_electrons"], -2, np.log10(0.99)),
+                fls("lg_10_factor_break_electrons",      d["lg_10_factor_break_electrons"], -2, 0),
+                fls("lg_10_factor_max_energy_electrons", d["lg_10_factor_max_energy_electrons"], -9, -1),
                 fs( "index_injected_electrons",          d["index_injected_electrons"],           0,  5, step=0.05),
             ],
             "Protons (Dummy)": [
@@ -747,9 +1027,9 @@ class BHJetExplorer:
             "BB Target": [
                 cb( "bb_enable",                         d["bb_enable"]),
                 cb( "bb_add_to_total",                   d["bb_add_to_total"]),
-                fls("lg_10_bb_temperature",              d["lg_10_bb_temperature"], -10, 10),
-                fls("lg_10_bb_energy_density",           d["lg_10_bb_energy_density"], -20, 10),
-                fls("lg_10_bb_luminosity",               d["lg_10_bb_luminosity"], 0, 60),
+                fls("lg_10_bb_temperature",              d["lg_10_bb_temperature"], 0, 3),
+                fls("lg_10_bb_energy_density",           d["lg_10_bb_energy_density"], -9, -1),
+                fls("lg_10_bb_luminosity",               d["lg_10_bb_luminosity"], 38, 46),
             ],
             "Meta-parameters": [
                 cb( "include_counterjet",                d["include_counterjet"]),
@@ -772,6 +1052,24 @@ class BHJetExplorer:
 
         self._tab          = tab
         self._flat_widgets = dict(_all_widgets)
+
+        if self._manual_update:
+            self._calculate_button = widgets.Button(
+                description="Calculate model", button_style="primary",
+                tooltip="Calculate the spectrum using the current controls.",
+            )
+            self._reset_button = widgets.Button(
+                description="Reset to starting model",
+                tooltip="Restore the tutorial starting values and calculate again.",
+            )
+            self._status = widgets.Label(value="Adjust parameters, then calculate the model.")
+            self._calculate_button.on_click(lambda _: self.calculate())
+            self._reset_button.on_click(lambda _: self.reset())
+            self._manual_controls = HBox([
+                self._calculate_button, self._reset_button, self._status,
+            ])
+        else:
+            self._manual_controls = None
 
         if _THREEML_AVAILABLE:
             self._mode_toggle = widgets.ToggleButtons(
@@ -797,18 +1095,13 @@ class BHJetExplorer:
 
     def _on_mode_change(self, change):
         self._mode = change["new"]
-        self._on_change()
+        self.calculate()
 
-    def _on_change(self, change=None):
-        # Hidden controls retain their current default values. This lets a
-        # tutorial expose only a few sliders without changing the model logic.
+    def _parameters_from_widgets(self):
+        """Read the controls and keep the linked acceleration distances in sync."""
         p = self._defaults.copy()
         p.update({k: w.value for k, w in self._flat_widgets.items()})
 
-        # The two distances are displayed as log10(z / r_g), so copying the
-        # slider value makes the physical particle- and bulk-acceleration
-        # distances identical. Disable the particle-acceleration slider while
-        # linked so that the UI makes the relationship unambiguous.
         particle_slider = self._flat_widgets.get("lg_10_z_dissipation")
         if p["link_particle_to_bulk_acceleration"]:
             p["lg_10_z_dissipation"] = p["lg_10_z_end_of_acceleration"]
@@ -818,6 +1111,19 @@ class BHJetExplorer:
                     particle_slider.value = p["lg_10_z_dissipation"]
         elif particle_slider is not None:
             particle_slider.disabled = False
+        return p
+
+    def _on_widget_change(self, change=None):
+        if self._loading_parameters:
+            return
+        if self._manual_update:
+            self._parameters_from_widgets()
+            return
+        self.calculate()
+
+    def calculate(self):
+        """Calculate and redraw the model using the current widget values."""
+        p = self._parameters_from_widgets()
 
         if self._meta_params_changed(p):
             for k in p:
@@ -838,6 +1144,9 @@ class BHJetExplorer:
 
         if hasattr(self, "_fig_zone") and plt.fignum_exists(self._fig_zone.number):
             self._draw_zone(self._zone_slider.value)
+
+        if self._manual_update:
+            self._status.value = "Model calculated."
 
     def _update_pure(self, p):
         bl = self.bljet
@@ -923,12 +1232,52 @@ class BHJetExplorer:
     # ── public API ────────────────────────────────────────────────────────────
 
     def set_param(self, name, value):
-        """Set a widget value programmatically, triggering a redraw."""
+        """Set a widget value programmatically."""
         self._flat_widgets[name].value = value
+
+    def get_parameters(self):
+        """Return the current parameters, including the values set in the widgets."""
+        return self._parameters_from_widgets().copy()
+
+    def set_parameters(self, parameters):
+        """Apply saved parameters to the widgets and recalculate the model."""
+        rebuild_model = False
+        self._loading_parameters = True
+        try:
+            for name, value in parameters.items():
+                if name in self._flat_widgets:
+                    self._flat_widgets[name].value = value
+                elif name in self._defaults:
+                    self._defaults[name] = value
+                    rebuild_model = True
+        finally:
+            self._loading_parameters = False
+
+        if rebuild_model:
+            self._build_models()
+        self.calculate()
+
+    def reset(self):
+        """Restore the supplied starting model and redraw it."""
+        for name, widget in self._flat_widgets.items():
+            if name in self._starting_defaults:
+                widget.value = self._starting_defaults[name]
+        self.calculate()
+
+    def get_total_sed(self):
+        """Return the current total model as energy [eV] and nu F_nu [cgs]."""
+        bhjet = self._active_bhjet
+        energy_erg = np.asarray(bhjet.get_observed_photon_energy_grid(), dtype=float)
+        sed = energy_erg * np.asarray(bhjet.get_observed_photon_flux_total(), dtype=float)
+        return energy_erg * erg2eV, sed
 
     def display(self):
         """Render the SED UI: figure canvas + mode toggle + tab panel."""
-        display(VBox([self.fig.canvas, self._mode_toggle, self._tab]))
+        children = [self.fig.canvas]
+        if self._manual_controls is not None:
+            children.append(self._manual_controls)
+        children.extend([self._mode_toggle, self._tab])
+        display(VBox(children))
 
     def display_zones(self):
         """
